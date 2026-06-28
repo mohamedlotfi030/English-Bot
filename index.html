@@ -18,6 +18,9 @@
     .word-chip { display: inline-block; background: #334155; padding: 6px 12px; margin: 3px; border-radius: 20px; cursor: pointer; font-size: 13px; }
     .word-chip:hover { background: #5850ec; }
     .label { color: #5850ec; font-weight: bold; display: block; margin-top: 10px; }
+    .audio-group { margin-top: 10px; display: flex; gap: 5px; }
+    .audio-btn { background: #334155; border: none; color: white; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; }
+    .audio-btn:hover { background: #5850ec; }
   </style>
 </head>
 <body>
@@ -28,12 +31,14 @@
       <button class="tab-btn" onclick="switchTab('dictionary')">القاموس</button>
     </div>
 
+    <!-- قسم التصحيح -->
     <div id="checkerSection" class="content-section active">
-      <textarea id="userInput" rows="4" placeholder="اكتب جملة هنا..."></textarea>
+      <textarea id="userInput" rows="4" placeholder="اكتب الجملة هنا..."></textarea>
       <button class="action-btn" onclick="analyzeText()">تحليل وتصحيح</button>
-      <div id="checkerResult" class="result-box" style="direction: ltr;"></div>
+      <div id="checkerResult" class="result-box"></div>
     </div>
 
+    <!-- قسم القاموس -->
     <div id="dictionarySection" class="content-section">
       <div id="bookWords" style="max-height: 150px; overflow-y: auto; margin-bottom: 15px; border-bottom: 1px solid #475569; padding-bottom: 10px;"></div>
       <input type="text" id="wordInput" placeholder="ابحث عن كلمة...">
@@ -43,12 +48,29 @@
   </div>
 
   <script>
+    // --- وظائف النطق (Speech Engine) ---
+    function speak(text, lang) {
+        const u = new SpeechSynthesisUtterance(text);
+        const voices = window.speechSynthesis.getVoices();
+        // محاولة اختيار صوت حسب اللهجة المطلوبة
+        u.voice = voices.find(v => v.lang.includes(lang)) || voices[0];
+        u.lang = lang;
+        window.speechSynthesis.speak(u);
+    }
+
+    function getAudioButtons(text) {
+        return `<div class="audio-group">
+                    <button class="audio-btn" onclick="speak('${text}', 'en-US')">🔊 US Accent</button>
+                    <button class="audio-btn" onclick="speak('${text}', 'en-GB')">🔊 UK Accent</button>
+                </div>`;
+    }
+
     function switchTab(tab) {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.innerText.includes(tab === 'checker' ? 'التصحيح' : 'القاموس')));
       document.querySelectorAll('.content-section').forEach(s => s.classList.toggle('active', s.id === tab + 'Section'));
     }
 
-    // منطق التصحيح (المحدث)
+    // --- تحليل النصوص ---
     async function analyzeText() {
       const input = document.getElementById("userInput").value.trim();
       const box = document.getElementById("checkerResult");
@@ -59,41 +81,24 @@
       const lowerInput = input.toLowerCase();
       let correctedText = input;
 
+      // منطق تصحيح يدوي
       if (lowerInput.includes("tomorrow") && (lowerInput.includes("went") || lowerInput.includes("did"))) {
           correctedText = input.replace(/went/gi, "will go").replace(/did/gi, "will do");
       } else if (lowerInput.includes("yesterday") && lowerInput.includes("will")) {
           correctedText = input.replace(/will go/gi, "went").replace(/will do/gi, "did").replace(/will/gi, "");
-      } else if (lowerInput.includes("he are") || lowerInput.includes("she are") || lowerInput.includes("it are")) {
-          correctedText = input.replace(/are/gi, "is");
       }
 
-      if (correctedText !== input) {
-          box.innerHTML = `<strong>Correction:</strong><br>${correctedText}`;
-          return;
-      }
-
-      try {
-        const res = await fetch("https://api.languagetool.org/v2/check", {
-          method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({ text: input, language: "en-US", level: "picky" })
-        });
-        const data = await res.json();
-        if (data.matches && data.matches.length > 0) {
-          data.matches.sort((a, b) => b.offset - a.offset).forEach(m => {
-            correctedText = correctedText.substring(0, m.offset) + m.replacements[0].value + correctedText.substring(m.offset + m.length);
-          });
-          box.innerHTML = `<strong>Correction:</strong><br>${correctedText}`;
-        } else { box.innerHTML = "✨ النص سليم."; }
-      } catch(e) { box.innerHTML = "⚠️ خطأ في الاتصال."; }
+      box.innerHTML = `<strong>Correction:</strong><br>${correctedText} ${getAudioButtons(correctedText)}`;
     }
 
-    // القاموس الكامل (المحدث)
+    // --- القاموس الكامل ---
     async function searchWord(w = null) {
       const word = w || document.getElementById("wordInput").value.trim();
       const box = document.getElementById("dictionaryResult");
       if (!word) return;
       box.style.display = "block";
-      box.innerHTML = "⏳ جاري البحث في القاموس...";
+      box.innerHTML = "⏳ جاري البحث...";
+      
       try {
         const [arRes, enRes] = await Promise.all([
           fetch(`https://api.mymemory.translated.net/get?q=${word}&langpair=en|ar`).then(r => r.json()),
@@ -101,17 +106,17 @@
         ]);
         
         let def = "No definition found.";
-        let example = "No example available.";
+        let example = "";
         if (enRes && enRes[0]) {
-          const entry = enRes[0].meanings[0].definitions[0];
-          def = entry.definition;
-          example = entry.example || "No example in database.";
+          def = enRes[0].meanings[0].definitions[0].definition;
+          example = enRes[0].meanings[0].definitions[0].example || "No example in database.";
         }
 
         box.innerHTML = `<strong>${word}</strong><br>
                          <span class="label">Arabic:</span> ${arRes.responseData.translatedText}<br>
                          <span class="label">English Meaning:</span> ${def}<br>
-                         <span class="label">Example:</span> "${example}"`;
+                         <span class="label">Example:</span> "${example}"
+                         ${getAudioButtons(word)}`;
       } catch(e) { box.innerHTML = "⚠️ لم يتم العثور على معلومات."; }
     }
 
