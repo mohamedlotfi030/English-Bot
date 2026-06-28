@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>المساعد اللغوي - نظام التقييم</title>
+  <title>المساعد اللغوي المتكامل</title>
   <style>
     body { background-color: #0f172a; color: #f1f5f9; font-family: 'Segoe UI', sans-serif; padding: 20px; }
     .container { max-width: 700px; margin: auto; background-color: #1e293b; padding: 25px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
@@ -13,12 +13,7 @@
     .content-section.active { display: block; }
     textarea { width: 100%; background: #0f172a; color: white; border: 1px solid #475569; padding: 12px; border-radius: 8px; box-sizing: border-box; }
     .action-btn { background: #5850ec; color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; margin-top: 10px; cursor: pointer; font-weight: bold; }
-    
     .result-box { margin-top: 20px; padding: 15px; background: #0f172a; border-radius: 10px; border-right: 5px solid #5850ec; }
-    .score-badge { font-size: 20px; font-weight: bold; margin-bottom: 10px; display: block; }
-    .error-highlight { color: #ef4444; text-decoration: line-through; background: rgba(239, 68, 68, 0.2); padding: 2px 4px; border-radius: 4px; }
-    .correct-highlight { color: #22c55e; font-weight: bold; background: rgba(34, 197, 94, 0.1); padding: 2px 4px; border-radius: 4px; }
-    
     .audio-btn { background: #334155; border: none; color: white; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10px; margin: 2px; }
     .word-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 5px; margin-top: 10px; }
     .word-chip { background: #334155; padding: 5px; border-radius: 4px; cursor: pointer; font-size: 11px; text-align: center; border: 1px solid #475569; }
@@ -29,12 +24,12 @@
 <div class="container">
     <div class="tabs">
       <button class="tab-btn active" id="btnChecker" onclick="switchTab('checker')">التصحيح</button>
-      <button class="tab-btn" id="btnDict" onclick="switchTab('dictionary')">القاموس</button>
+      <button class="tab-btn" id="btnDict" onclick="switchTab('dictionary')">القاموس (100 كلمة)</button>
     </div>
 
     <div id="checkerSection" class="content-section active">
       <textarea id="userInput" rows="4" placeholder="مثال: we went to school tomorrow"></textarea>
-      <button class="action-btn" onclick="processText()">تحليل وتقييم</button>
+      <button class="action-btn" onclick="processText()">تحليل وتصحيح</button>
       <div id="checkerResult" class="result-box" style="display:none;"></div>
     </div>
 
@@ -47,7 +42,8 @@
 </div>
 
 <script>
-    const words = ["Ambiguous", "Beneficial", "Consistent", "Establish", "Evaluate", "Fundamental", "Generate", "Hypothesis", "Implement", "Objective", "Promote", "Significant", "Sustain", "Theoretical", "Underestimate", "Apparent", "Capacity", "Challenge", "Dilemma", "Diligent", "Emerge", "Eloquent", "Framework", "Fascinating", "Genuine", "Initiative", "Inevitable", "Justify", "Knowledgeable", "Lucrative", "Maintain", "Neutral", "Outcome", "Perspective", "Relevant", "Advocate", "Coherent", "Compromise", "Constitute", "Discrepancy", "Indispensable", "Meticulous", "Pragmatic", "Redundant", "Scrutinize", "Subsequent", "Trivial", "Vulnerable", "Zealous"];
+    // --- البيانات ---
+    const words = ["Ambiguous", "Beneficial", "Consistent", "Establish", "Evaluate", "Fundamental", "Generate", "Hypothesis", "Implement", "Objective", "Promote", "Significant", "Sustain", "Theoretical", "Underestimate", "Apparent", "Capacity", "Challenge", "Dilemma", "Diligent", "Emerge", "Eloquent", "Framework", "Fascinating", "Genuine", "Initiative", "Inevitable", "Justify", "Knowledgeable", "Lucrative", "Maintain", "Neutral", "Outcome", "Perspective", "Relevant", "Advocate", "Coherent", "Compromise", "Constitute", "Discrepancy", "Indispensable", "Meticulous", "Pragmatic", "Redundant", "Scrutinize", "Subsequent", "Trivial", "Vulnerable", "Zealous", "Acquire", "Arbitrary", "Assert", "Convey", "Denote", "Deviate", "Emphasize", "Enhance", "Exceed", "Extract", "Fluctuate", "Hypothesize", "Illustrate", "Interpret", "Incorporate", "Jurisdiction", "Kinetic", "Liability", "Manifest", "Negligible", "Overt", "Ephemeral", "Exacerbate", "Immutable", "Inherent", "Juxtapose", "Paradigm", "Quintessential", "Repercussion", "Superfluous", "Ubiquitous", "Unprecedented", "Vicarious", "Widespread", "Yield", "Zenith", "Abstain", "Alleviate", "Ameliorate", "Anomalous", "Apathy", "Audacious", "Benevolent", "Capricious", "Candid", "Complacent", "Conspicuous", "Delineate", "Despot", "Ebullient", "Eclectic"];
     
     // إظهار الكلمات
     const listDiv = document.getElementById('wordList');
@@ -56,19 +52,18 @@
         div.onclick = () => searchWord(w); listDiv.appendChild(div);
     });
 
+    // --- منطق التصحيح المطور ---
     async function processText() {
         let input = document.getElementById("userInput").value.trim();
         const box = document.getElementById("checkerResult");
         if (!input) return;
-        box.innerHTML = "⏳ جاري التحليل...";
-        box.style.display = "block";
-
-        // 1. تصحيح منطقي
+        
+        // 1. تصحيح منطقي يحافظ على بقية الجملة
         let correctedLogic = input;
-        let logicFixes = 0;
         if (/\bwent\b/i.test(input) && /\btomorrow\b/i.test(input)) {
             correctedLogic = input.replace(/\bwent\b/i, "will go");
-            logicFixes++;
+        } else if (/\bleft\b/i.test(input) && /\btomorrow\b/i.test(input)) {
+            correctedLogic = input.replace(/\bleft\b/i, "will leave");
         }
 
         try {
@@ -78,43 +73,38 @@
             });
             const data = await res.json();
             
-            // 2. إعداد النصوص للتظليل
-            let highlightedOrig = input;
             let finalOutput = correctedLogic;
-            let matches = data.matches;
-
-            // تطبيق التظليل والتصحيح
-            matches.sort((a,b) => b.offset - a.offset).forEach(m => {
-                let errorText = correctedLogic.substring(m.offset, m.offset + m.length);
-                highlightedOrig = highlightedOrig.substring(0, m.offset) + `<span class="error-highlight">${errorText}</span>` + highlightedOrig.substring(m.offset + m.length);
-                finalOutput = finalOutput.substring(0, m.offset) + `<span class="correct-highlight">${m.replacements[0].value}</span>` + finalOutput.substring(m.offset + m.length);
+            data.matches.forEach(m => {
+                finalOutput = finalOutput.replace(m.context.text.substring(m.offset, m.offset+m.length), m.replacements[0].value);
             });
 
-            // 3. حساب النسبة
-            let score = Math.max(0, 100 - ((matches.length + logicFixes) * 20));
-            
-            box.innerHTML = `
-                <span class="score-badge">التقييم: ${score}%</span><br>
-                <strong>الجملة الأصلية:</strong><br>${highlightedOrig}<br><br>
-                <strong>الجملة الصحيحة:</strong><br>${finalOutput} ${getAudioMarkup(correctedLogic)}
-            `;
+            box.style.display = "block";
+            box.innerHTML = `<strong>الجملة المصححة:</strong><br>${finalOutput} ${getAudioMarkup(finalOutput)}`;
         } catch(e) { box.innerHTML = "حدث خطأ."; }
     }
 
+    // --- منطق القاموس مع الترجمة ---
     async function searchWord(w = null) {
         const word = w || document.getElementById("wordInput").value.trim();
         if (!word) return;
         const box = document.getElementById("dictionaryResult");
         box.style.display = "block";
+        box.innerHTML = "جاري البحث...";
+
         try {
             const [arRes, enRes] = await Promise.all([
                 fetch(`https://api.mymemory.translated.net/get?q=${word}&langpair=en|ar`).then(r => r.json()),
                 fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`).then(r => r.json())
             ]);
-            box.innerHTML = `<strong>${word}</strong> ${getAudioMarkup(word)}<br><strong>الترجمة:</strong> ${arRes.responseData.translatedText}<br><strong>الشرح:</strong> ${enRes[0].meanings[0].definitions[0].definition}`;
+            
+            const trans = arRes.responseData.translatedText;
+            const def = enRes[0].meanings[0].definitions[0].definition;
+            
+            box.innerHTML = `<strong>${word}</strong> ${getAudioMarkup(word)}<br><strong>الترجمة:</strong> ${trans}<br><strong>الشرح:</strong> ${def}`;
         } catch(e) { box.innerHTML = "لم أجد الكلمة."; }
     }
 
+    // --- أدوات ---
     function switchTab(tab) {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
@@ -129,7 +119,6 @@
 
     function speak(text, locale) {
         const u = new SpeechSynthesisUtterance(text);
-        window.speechSynthesis.speak(u); // يفضل تشغيل الصوت للمستخدم
         u.lang = locale;
         window.speechSynthesis.speak(u);
     }
