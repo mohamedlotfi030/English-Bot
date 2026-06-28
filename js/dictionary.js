@@ -1,7 +1,7 @@
 /* ==========================================================
    English-Bot
    dictionary.js
-   FINAL FIX - Stable Rendering + Arabic Fix
+   ULTIMATE FIX - No Cache + Always Fresh + Arabic Stable
 ========================================================== */
 
 "use strict";
@@ -14,7 +14,7 @@ function getArabicTranslation(word) {
 
     if (!word) return "لا توجد ترجمة";
 
-    const clean = word.toLowerCase().trim();
+    const clean = String(word).toLowerCase().trim();
 
     const map = {
 
@@ -35,7 +35,7 @@ function getArabicTranslation(word) {
 }
 
 /* ==========================================================
-   Search Word
+   SEARCH WORD (ULTIMATE FIX)
 ========================================================== */
 
 async function searchWord() {
@@ -45,40 +45,42 @@ async function searchWord() {
 
     if (!input || !resultBox) return;
 
-    const word = input.value.trim();
+    // 🔥 ALWAYS FRESH VALUE
+    const word = String(input.value || "").trim();
 
     if (!word) {
         showToast("Please enter a word.", "error");
-        input.focus();
         return;
     }
 
-    showLoader();
-
+    // 🔥 HARD RESET UI (prevent stale render)
+    resultBox.innerHTML = "";
     resultBox.classList.remove("hidden");
 
-    // 🔥 IMPORTANT: force clear old result to prevent stale UI
-    resultBox.innerHTML = `<p>Searching dictionary...</p>`;
+    showLoader();
 
     try {
 
-        const response = await searchDictionary(word);
+        // 🔥 FORCE CACHE BYPASS
+        const response = await searchDictionary(word + "_" + Date.now());
 
-        if (!response.success) {
-            throw new Error(response.error || "Dictionary request failed.");
-        }
-
-        const dictionary = normalizeDictionaryResponse(response.data);
-
-        if (!dictionary.success) {
+        if (!response || !response.success) {
             resultBox.innerHTML = `<p class="text-danger">No definition found.</p>`;
             return;
         }
 
-        saveRecentSearch(word);
+        const dictionary = normalizeDictionaryResponse(response.data);
 
-        // 🔥 FIX: attach current user input explicitly
+        if (!dictionary || !dictionary.success) {
+            resultBox.innerHTML = `<p class="text-danger">No definition found.</p>`;
+            return;
+        }
+
+        // 🔥 FORCE OVERRIDE WITH CURRENT INPUT
+        dictionary.word = word;
         dictionary.userWord = word;
+
+        saveRecentSearch(word);
 
         renderDictionaryResult(dictionary);
 
@@ -88,7 +90,7 @@ async function searchWord() {
 
         console.error(error);
 
-        showToast("Unable to search dictionary.", "error");
+        showToast("Dictionary error.", "error");
 
         resultBox.innerHTML = `
             <p class="text-danger">
@@ -103,7 +105,7 @@ async function searchWord() {
 }
 
 /* ==========================================================
-   Render Dictionary Result
+   RENDER RESULT
 ========================================================== */
 
 function renderDictionaryResult(data) {
@@ -111,14 +113,12 @@ function renderDictionaryResult(data) {
     const resultBox = document.getElementById("dictionaryResult");
     if (!resultBox) return;
 
-    // 🔥 ALWAYS recompute Arabic from latest word
-    const arabic = getArabicTranslation(
-        data.userWord || data.word
-    );
-
     const word = escapeHtml(data.word);
     const phonetic = escapeHtml(data.phonetic || "N/A");
     const favorite = isFavorite(data.word);
+
+    // 🔥 ALWAYS USE FRESH WORD
+    const arabic = getArabicTranslation(data.userWord || data.word);
 
     let html = `
         <div class="dictionary-card">
@@ -212,7 +212,7 @@ function renderDictionaryResult(data) {
 }
 
 /* ==========================================================
-   Favorite System
+   FAVORITES
 ========================================================== */
 
 function toggleDictionaryFavorite(word) {
@@ -238,7 +238,7 @@ function toggleDictionaryFavorite(word) {
 }
 
 /* ==========================================================
-   Clear Result
+   CLEAR
 ========================================================== */
 
 function clearDictionaryResult() {
@@ -252,7 +252,7 @@ function clearDictionaryResult() {
 }
 
 /* ==========================================================
-   Enter Key Support
+   ENTER KEY
 ========================================================== */
 
 function initializeDictionary() {
@@ -272,11 +272,11 @@ function initializeDictionary() {
 }
 
 /* ==========================================================
-   Auto Init
+   AUTO INIT
 ========================================================== */
 
 document.addEventListener("DOMContentLoaded", initializeDictionary);
 
 /* ==========================================================
-   End
+   END
 ========================================================== */
