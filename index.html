@@ -239,6 +239,13 @@
                 resultBox.innerHTML = "<p style='color:red;'>عذراً، فشل الاتصال. تأكد من الإنترنت.</p>";
             }
         }
+        // إضافة محقق أزمنة ذكي جداً
+                const lowerInput = userInput.toLowerCase();
+                if ((lowerInput.includes("went") || lowerInput.includes("did")) && lowerInput.includes("tomorrow")) {
+                    explanations.push("- Note: You used a past tense verb with 'tomorrow'. Use future tense instead (e.g., 'I will go').");
+                    resultBox.innerHTML = `<strong>Grammar/Logic Note:</strong>\n${explanations.join('\n')}`;
+                    return; // إيقاف العرض العادي وإظهار التنبيه
+                }
 
         // 4. محرك القاموس والترجمة وتحديد المستوى (B1 إلى C2)
         async function searchWord(wordFromBook = null) {
