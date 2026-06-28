@@ -76,6 +76,20 @@ body{
 
 }
 
+/* ==========================================================
+   App Layout
+========================================================== */
+
+.app{
+
+    display:flex;
+
+    width:100%;
+
+    min-height:100vh;
+
+}
+
 /* =========================
    Global Elements
 ========================= */
@@ -278,6 +292,10 @@ nav{
     display:flex;
 
     flex-direction:column;
+
+    min-width:0;
+
+    width:calc(100% - var(--sidebar-width));
 
     overflow:hidden;
 
