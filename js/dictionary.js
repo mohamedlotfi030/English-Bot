@@ -1,109 +1,94 @@
 "use strict";
 
 /* ==========================================================
-   LOCAL CACHE (FAST WORDS)
+   AUTO AI DICTIONARY (NO MANUAL DATA)
 ========================================================== */
 
-const LOCAL_DB = {
-    play: {
-        arabic: "يلعب / مسرحية",
-        definition: "Engage in activity for enjoyment or entertainment.",
-        synonyms: ["game", "perform", "act"]
-    },
-    book: {
-        arabic: "كتاب",
-        definition: "A written or printed work consisting of pages.",
-        synonyms: ["novel", "text", "volume"]
-    },
-    car: {
-        arabic: "سيارة",
-        definition: "A road vehicle with an engine.",
-        synonyms: ["vehicle", "automobile", "auto"]
-    },
-    house: {
-        arabic: "منزل",
-        definition: "A building for human living.",
-        synonyms: ["home", "residence", "dwelling"]
-    },
-    love: {
-        arabic: "حب",
-        definition: "An intense feeling of deep affection.",
-        synonyms: ["affection", "passion", "adoration"]
-    },
-    school: {
-        arabic: "مدرسة",
-        definition: "An institution for education.",
-        synonyms: ["academy", "institute", "college"]
-    }
-};
-
-/* ==========================================================
-   API FETCH (Fallback for unknown words)
-========================================================== */
-
-async function fetchFromAPI(word) {
+async function searchDictionary(word) {
 
     try {
 
-        // English definition API
-        const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
+        const res = await fetch(
+            `https://api.dictionaryapi.dev/api/v2/entries/en/${word}`
+        );
+
         const data = await res.json();
 
-        if (!Array.isArray(data)) return null;
+        if (!Array.isArray(data)) {
+            throw new Error("No data");
+        }
 
-        const meanings = data[0]?.meanings?.[0];
+        const entry = data[0];
+
+        const meaning = entry?.meanings?.[0];
+        const definition = meaning?.definitions?.[0]?.definition || "";
+
+        const synonyms = meaning?.synonyms || [];
+
+        // 🔥 Arabic translation API
+        const arabic = await translateToArabic(word);
 
         return {
-            definition: meanings?.definitions?.[0]?.definition || "",
-            synonyms: meanings?.synonyms || []
+            success: true,
+            data: {
+                word: entry.word,
+                phonetic: entry.phonetic || "",
+                definition,
+                synonyms,
+                arabic
+            }
         };
 
     } catch (e) {
-        return null;
+
+        return {
+            success: false,
+            error: "Not found"
+        };
     }
 }
 
 /* ==========================================================
-   MAIN TRANSLATION ENGINE
+   TRANSLATION ENGINE (AUTO ARABIC)
 ========================================================== */
 
-async function getWordData(word) {
+async function translateToArabic(word) {
 
-    const clean = word.toLowerCase().trim();
+    try {
 
-    // 1. Local first
-    if (LOCAL_DB[clean]) {
-        return {
-            word: clean,
-            arabic: LOCAL_DB[clean].arabic,
-            definition: LOCAL_DB[clean].definition,
-            synonyms: LOCAL_DB[clean].synonyms
-        };
+        const res = await fetch(
+            `https://api.mymemory.translated.net/get?q=${word}&langpair=en|ar`
+        );
+
+        const data = await res.json();
+
+        return data?.responseData?.translatedText || "لا توجد ترجمة";
+
+    } catch (e) {
+        return "لا توجد ترجمة";
     }
+}
 
-    // 2. API fallback
-    const apiData = await fetchFromAPI(clean);
+/* ==========================================================
+   NORMALIZE (KEEP COMPATIBILITY)
+========================================================== */
 
-    if (apiData) {
-        return {
-            word: clean,
-            arabic: "لا توجد ترجمة جاهزة",
-            definition: apiData.definition,
-            synonyms: apiData.synonyms
-        };
-    }
+function normalizeDictionaryResponse(data) {
 
-    // 3. fallback
+    if (!data) return { success: false };
+
     return {
-        word: clean,
-        arabic: "لا توجد ترجمة",
-        definition: "No definition found.",
-        synonyms: []
+        success: true,
+        word: data.word,
+        phonetic: data.phonetic,
+        definition: data.definition,
+        synonyms: data.synonyms,
+        arabic: data.arabic
     };
 }
 
 /* ==========================================================
-   SEARCH FUNCTION
+   SEARCH WORD (UI HOOK)
 ========================================================== */
 
 async function searchWord() {
@@ -121,18 +106,26 @@ async function searchWord() {
     resultBox.innerHTML = `<p>Searching...</p>`;
     showLoader();
 
-    const data = await getWordData(word);
+    const response = await searchDictionary(word);
 
-    renderDictionary(data);
+    if (!response.success) {
+        resultBox.innerHTML = `<p>No definition found</p>`;
+        hideLoader();
+        return;
+    }
+
+    const data = normalizeDictionaryResponse(response.data);
+
+    renderDictionaryResult(data);
 
     hideLoader();
 }
 
 /* ==========================================================
-   RENDER UI
+   RENDER
 ========================================================== */
 
-function renderDictionary(data) {
+function renderDictionaryResult(data) {
 
     const box = document.getElementById("dictionaryResult");
 
@@ -145,13 +138,16 @@ function renderDictionary(data) {
                 🇸🇦 ${data.arabic}
             </p>
 
+            <p class="phonetic">
+                ${data.phonetic}
+            </p>
+
             <p class="definition">
                 📘 ${data.definition}
             </p>
 
             <div class="synonyms">
-                <strong>Synonyms:</strong>
-                ${data.synonyms.length ? data.synonyms.join(", ") : "None"}
+                🔁 ${data.synonyms?.length ? data.synonyms.join(", ") : "None"}
             </div>
 
         </div>
@@ -159,16 +155,15 @@ function renderDictionary(data) {
 }
 
 /* ==========================================================
-   ENTER SUPPORT
+   INIT
 ========================================================== */
 
 document.addEventListener("DOMContentLoaded", () => {
 
     const input = document.getElementById("dictionaryInput");
 
-    if (input) {
-        input.addEventListener("keydown", (e) => {
-            if (e.key === "Enter") searchWord();
-        });
-    }
+    input?.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") searchWord();
+    });
+
 });
