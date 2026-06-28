@@ -173,6 +173,10 @@ function renderDictionaryResult(data){
 
                     <h2>${word}</h2>
 
+<p class="arabic-translation">
+    🇸🇦 ${escapeHtml(data.arabic || "No Arabic translation")}
+</p>
+
                     <p class="phonetic">
 
                         ${phonetic}
