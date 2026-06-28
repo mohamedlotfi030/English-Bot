@@ -2,89 +2,51 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>المساعد اللغوي - نظام محترف</title>
+  <title>المساعد اللغوي - نظام التحليل الذكي</title>
   <style>
     body { background-color: #0f172a; color: #f1f5f9; font-family: 'Segoe UI', sans-serif; padding: 20px; }
-    .container { max-width: 650px; margin: auto; background-color: #1e293b; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+    .container { max-width: 700px; margin: auto; background-color: #1e293b; padding: 25px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
     .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
     .tab-btn { flex: 1; background: #334155; border: none; color: #cbd5e1; padding: 12px; cursor: pointer; border-radius: 8px; }
     .tab-btn.active { background: #5850ec; color: white; }
     .content-section { display: none; }
     .content-section.active { display: block; }
     
-    textarea, input { width: 100%; background: #0f172a; color: white; border: 1px solid #475569; padding: 12px; border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; }
-    .action-btn { background: #5850ec; color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; cursor: pointer; font-weight: bold; }
+    textarea { width: 100%; background: #0f172a; color: white; border: 1px solid #475569; padding: 12px; border-radius: 8px; box-sizing: border-box; }
+    .action-btn { background: #5850ec; color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; margin-top: 10px; cursor: pointer; font-weight: bold; }
     
-    .result-box { margin-top: 20px; padding: 15px; border-radius: 10px; background: #0f172a; border-right: 5px solid #5850ec; text-align: left; direction: ltr; min-height: 80px; }
-    .audio-group { margin-top: 10px; display: flex; gap: 5px; }
-    .audio-btn { background: #334155; border: none; color: white; padding: 6px 10px; border-radius: 5px; cursor: pointer; font-size: 11px; }
-    
-    .level-nav { display: flex; gap: 5px; margin-bottom: 10px; }
-    .level-btn { background: #1e293b; color: #cbd5e1; border: 1px solid #5850ec; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
-    .level-btn.active { background: #5850ec; color: white; }
-    .word-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; max-height: 300px; overflow-y: auto; padding: 10px; background: #0f172a; border-radius: 8px; }
-    .word-chip { background: #334155; padding: 6px; border-radius: 4px; cursor: pointer; font-size: 12px; text-align: center; border: 1px solid #475569; }
+    .result-box { margin-top: 20px; padding: 15px; background: #0f172a; border-radius: 10px; }
+    .error { color: #ef4444; background: rgba(239, 68, 68, 0.2); text-decoration: underline; font-weight: bold; }
+    .score-bar { height: 8px; background: #334155; border-radius: 4px; margin: 10px 0; overflow: hidden; }
+    .score-fill { height: 100%; background: #22c55e; transition: width 0.5s; }
+    .suggestion { color: #38bdf8; font-size: 0.9em; margin-top: 5px; }
+    .audio-btn { background: #334155; border: none; color: white; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10px; margin-left: 5px; }
   </style>
 </head>
 <body>
 
 <div class="container">
     <div class="tabs">
-      <button class="tab-btn active" id="btnChecker" onclick="switchTab('checker')">التصحيح</button>
+      <button class="tab-btn active" id="btnChecker" onclick="switchTab('checker')">التحليل والتصحيح</button>
       <button class="tab-btn" id="btnDict" onclick="switchTab('dictionary')">القاموس</button>
     </div>
 
+    <!-- قسم التصحيح -->
     <div id="checkerSection" class="content-section active">
-      <textarea id="userInput" rows="4" placeholder="اكتب الجملة هنا (مثال: I left tomorrow)"></textarea>
-      <button class="action-btn" onclick="processText()">تحليل وتصحيح</button>
+      <textarea id="userInput" rows="4" placeholder="اكتب الجملة هنا..."></textarea>
+      <button class="action-btn" onclick="processText()">تحليل الجملة</button>
       <div id="checkerResult" class="result-box" style="display:none;"></div>
     </div>
 
+    <!-- قسم القاموس -->
     <div id="dictionarySection" class="content-section">
-      <div class="level-nav">
-          <button class="level-btn active" onclick="loadWords('B2')">B2</button>
-          <button class="level-btn" onclick="loadWords('C1')">C1</button>
-          <button class="level-btn" onclick="loadWords('C2')">C2</button>
-      </div>
       <input type="text" id="wordInput" placeholder="بحث...">
       <button class="action-btn" onclick="searchWord()">بحث وتعلم</button>
       <div id="dictionaryResult" class="result-box" style="display:none;"></div>
-      <div id="wordList" class="word-list"></div>
     </div>
 </div>
 
 <script>
-    // --- قواعد التصحيح الموسعة ---
-    const grammarRules = [
-        { f: /\b(we|they)\s+is\b/gi, r: "$1 are" },
-        // تغطية أفعال الماضي مع زمن المستقبل
-        { f: /\bleft\s+.*?tomorrow\b/gi, r: "will leave tomorrow" },
-        { f: /\bwent\s+.*?tomorrow\b/gi, r: "will go tomorrow" },
-        { f: /\b(saw|seen)\s+.*?tomorrow\b/gi, r: "will see tomorrow" },
-        // عكس القواعد
-        { f: /\bwill\s+.*?yesterday\b/gi, r: "did ... yesterday" }
-    ];
-
-    const vocabData = {
-        B2: ["Ambiguous", "Beneficial", "Consistent", "Establish", "Evaluate", "Fundamental", "Generate", "Hypothesis", "Implement", "Objective", "Promote", "Significant", "Sustain", "Theoretical", "Underestimate"],
-        C1: ["Advocate", "Coherent", "Compromise", "Constitute", "Discrepancy", "Indispensable", "Meticulous", "Pragmatic", "Redundant", "Scrutinize", "Subsequent", "Trivial", "Vulnerable", "Zealous"],
-        C2: ["Ephemeral", "Exacerbate", "Immutable", "Inherent", "Juxtapose", "Paradigm", "Quintessential", "Repercussion", "Superfluous", "Ubiquitous", "Unprecedented", "Vicarious", "Widespread", "Yield", "Zenith"]
-    };
-
-    // --- الوظائف ---
-    function speak(text, lang) {
-        const u = new SpeechSynthesisUtterance(text);
-        u.lang = lang;
-        window.speechSynthesis.speak(u);
-    }
-
-    function getAudioMarkup(text) {
-        return `<div class="audio-group">
-                    <button class="audio-btn" onclick="speak('${text.replace(/'/g, "\\'")}', 'en-US')">🔊 US</button>
-                    <button class="audio-btn" onclick="speak('${text.replace(/'/g, "\\'")}', 'en-GB')">🔊 UK</button>
-                </div>`;
-    }
-
     function switchTab(tab) {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
@@ -93,62 +55,66 @@
     }
 
     async function processText() {
-        let text = document.getElementById("userInput").value.trim();
+        const input = document.getElementById("userInput").value.trim();
         const box = document.getElementById("checkerResult");
-        if (!text) return;
-        box.style.display = "block";
-        box.innerHTML = "⏳ تحليل...";
+        if (!input) return;
         
-        // تطبيق القواعد المحدثة
-        grammarRules.forEach(rule => text = text.replace(rule.f, rule.r));
+        box.style.display = "block";
+        box.innerHTML = "⏳ جاري التحليل...";
 
         try {
             const res = await fetch("https://api.languagetool.org/v2/check", {
                 method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: new URLSearchParams({ text: text, language: "en-US", level: "picky" })
+                body: new URLSearchParams({ text: input, language: "en-US", level: "picky" })
             });
             const data = await res.json();
-            if (data.matches && data.matches.length > 0) {
-                data.matches.sort((a,b) => b.offset - a.offset).forEach(m => {
-                    text = text.substring(0, m.offset) + m.replacements[0].value + text.substring(m.offset + m.length);
+            
+            // حساب النتيجة (Confidence Score)
+            const score = Math.max(0, 100 - (data.matches.length * 15));
+            
+            // تلوين الأخطاء
+            let highlighted = input;
+            let corrected = input;
+            
+            // التعديل من النهاية للبداية للحفاظ على الـ Indices
+            data.matches.sort((a,b) => b.offset - a.offset).forEach(m => {
+                const errorText = input.substring(m.offset, m.offset + m.length);
+                const replacement = m.replacements.length > 0 ? m.replacements[0].value : "";
+                
+                // إضافة وسم التظليل الأحمر
+                highlighted = highlighted.substring(0, m.offset) + `<span class="error">${errorText}</span>` + highlighted.substring(m.offset + m.length);
+                // التصحيح
+                corrected = corrected.substring(0, m.offset) + replacement + corrected.substring(m.offset + m.length);
+            });
+
+            // بناء النتائج
+            let output = `<strong>مؤشر الدقة: ${score}%</strong><div class="score-bar"><div class="score-fill" style="width:${score}%"></div></div>`;
+            output += `<strong>الجملة الأصلية:</strong><br><div style="direction:ltr">${highlighted}</div><br>`;
+            output += `<strong>الجملة المصححة:</strong><br><div style="direction:ltr; color:#22c55e;">${corrected}</div>`;
+            
+            if (data.matches.length > 0) {
+                output += `<br><strong>بدائل مقترحة:</strong>`;
+                data.matches.slice(0,3).forEach(m => {
+                    output += `<div class="suggestion">• ${m.message}: ${m.replacements.map(r => r.value).slice(0,3).join(", ")}</div>`;
                 });
             }
-            box.innerHTML = `<strong>Correction:</strong><br>${text} ${getAudioMarkup(text)}`;
-        } catch(e) { box.innerHTML = `<strong>Result:</strong><br>${text} ${getAudioMarkup(text)}`; }
+            
+            box.innerHTML = output;
+        } catch(e) { box.innerHTML = "⚠️ حدث خطأ في الاتصال بالخادم."; }
     }
 
-    function loadWords(level) {
-        document.querySelectorAll('.level-btn').forEach(b => b.classList.remove('active'));
-        event.target.classList.add('active');
-        const listDiv = document.getElementById('wordList');
-        listDiv.innerHTML = '';
-        vocabData[level].forEach(w => {
-            const span = document.createElement('span');
-            span.className = 'word-chip';
-            span.innerText = w;
-            span.onclick = () => searchWord(w);
-            listDiv.appendChild(span);
-        });
-    }
-
-    async function searchWord(w = null) {
-        const word = w || document.getElementById("wordInput").value.trim();
+    async function searchWord() {
+        const word = document.getElementById("wordInput").value.trim();
         if (!word) return;
         const box = document.getElementById("dictionaryResult");
         box.style.display = "block";
-        box.innerHTML = "⏳ جاري البحث...";
         try {
-            const [ar, en] = await Promise.all([
-                fetch(`https://api.mymemory.translated.net/get?q=${word}&langpair=en|ar`).then(r => r.json()),
-                fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`).then(r => r.ok ? r.json() : null)
-            ]);
-            const def = en ? en[0].meanings[0].definitions[0].definition : "No definition.";
-            const ex = en && en[0].meanings[0].definitions[0].example ? en[0].meanings[0].definitions[0].example : "No example.";
-            box.innerHTML = `<strong>${word}</strong><br>AR: ${ar.responseData.translatedText}<br>Def: ${def}<br>Ex: "${ex}" ${getAudioMarkup(word)}`;
-        } catch(e) { box.innerHTML = "⚠️ تعذر العثور على الكلمة."; }
+            const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
+            const data = await res.json();
+            const def = data[0].meanings[0].definitions[0].definition;
+            box.innerHTML = `<strong>${word}</strong><br>Def: ${def}<br><button class="audio-btn" onclick="speechSynthesis.speak(new SpeechSynthesisUtterance('${word}'))">🔊 نطق</button>`;
+        } catch(e) { box.innerHTML = "⚠️ كلمة غير موجودة."; }
     }
-
-    loadWords('B2');
 </script>
 </body>
 </html>
