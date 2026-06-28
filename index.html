@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="English-Bot is an AI-powered English learning assistant featuring grammar checking, dictionary, vocabulary, pronunciation and translation.">
+    
+    <title>English-Bot | AI English Learning Assistant</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" href="assets/favicon.ico">
+
+    <!-- Google Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/responsive.css">
+    <link rel="stylesheet" href="css/themes.css">
+</head>
+
+<body>
+
+<div class="app">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="logo">
+            <i class="fa-solid fa-robot"></i>
+            <div>
+                <h2>English-Bot</h2>
+                <small>AI Assistant</small>
+            </div>
+        </div>
+        <nav class="menu">
+            <button class="nav-item active" data-page="home" aria-label="Home">
+                <i class="fa-solid fa-house"></i>
+                <span>Home</span>
+            </button>
+            <button class="nav-item" data-page="checker" aria-label="Grammar Checker">
+                <i class="fa-solid fa-spell-check"></i>
+                <span>Grammar Checker</span>
+            </button>
+            <button class="nav-item" data-page="dictionary" aria-label="Dictionary">
+                <i class="fa-solid fa-book"></i>
+                <span>Dictionary</span>
+            </button>
+            <button class="nav-item" data-page="vocabulary" aria-label="Vocabulary">
+                <i class="fa-solid fa-graduation-cap"></i>
+                <span>Vocabulary</span>
+            </button>
+            <button class="nav-item" data-page="favorites" aria-label="Favorites">
+                <i class="fa-solid fa-heart"></i>
+                <span>Favorites</span>
+            </button>
+            <button class="nav-item" data-page="history" aria-label="History">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                <span>History</span>
+            </button>
+            <button class="nav-item" data-page="settings" aria-label="Settings">
+                <i class="fa-solid fa-gear"></i>
+                <span>Settings</span>
+            </button>
+        </nav>
+        <div class="sidebar-footer">
+            <small>Version 1.0</small>
+        </div>
+    </aside>
+
+    <!-- Main -->
+    <div class="main">
+
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <h1 id="pageTitle">Home</h1>
+                <p>Improve your English every day.</p>
+            </div>
+            <div class="header-right">
+                <button class="icon-btn" id="searchBtn" aria-label="Search">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </button>
+                <button class="icon-btn" id="themeBtn" aria-label="Toggle Theme">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main id="content" role="main">
+            <section class="card hero">
+                <h2>Welcome to English-Bot 👋</h2>
+                <p>Your complete English learning assistant.</p>
+            </section>
+            <section class="dashboard">
+                <div class="card">
+                    <i class="fa-solid fa-spell-check"></i>
+                    <h3>Grammar Checker</h3>
+                    <p>Correct grammar and spelling mistakes.</p>
+                </div>
+                <div class="card">
+                    <i class="fa-solid fa-book"></i>
+                    <h3>Dictionary</h3>
+                    <p>Definitions, pronunciation and examples.</p>
+                </div>
+                <div class="card">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                    <h3>Vocabulary</h3>
+                    <p>Learn advanced English words.</p>
+                </div>
+                <div class="card">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <h3>Progress</h3>
+                    <p>Track your learning journey.</p>
+                </div>
+            </section>
+        </main>
+        
+        <footer>
+            © 2026 English-Bot
+        </footer>
+
+    </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Modal -->
+<div id="modalContainer"></div>
+
+<!-- Loading -->
+<div id="loader" class="hidden" role="status">
+    <div class="loader"></div>
+</div>
+
+<!-- Scripts -->
+<script src="js/utils.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/speech.js"></script>
+<script src="js/api.js"></script>
+<script src="js/checker.js"></script>
+<script src="js/dictionary.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
