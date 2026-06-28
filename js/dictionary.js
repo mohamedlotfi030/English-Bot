@@ -1,13 +1,13 @@
 /* ==========================================================
    English-Bot
    dictionary.js
-   ULTIMATE FIX - No Cache + Always Fresh + Arabic Stable
+   CLEAN VERSION - Stable + Simple + No Bugs
 ========================================================== */
 
 "use strict";
 
 /* ==========================================================
-   Arabic Translation Engine
+   SIMPLE ARABIC TRANSLATION (LOCAL ENGINE)
 ========================================================== */
 
 function getArabicTranslation(word) {
@@ -16,7 +16,7 @@ function getArabicTranslation(word) {
 
     const clean = String(word).toLowerCase().trim();
 
-    const map = {
+    const dictionary = {
 
         play: "يلعب / مسرحية / لعب",
         book: "كتاب",
@@ -27,15 +27,16 @@ function getArabicTranslation(word) {
         love: "حب",
         school: "مدرسة",
         teacher: "معلم",
-        student: "طالب"
+        student: "طالب",
+        first: "أول / أولاً"
 
     };
 
-    return map[clean] || "لا توجد ترجمة";
+    return dictionary[clean] || "لا توجد ترجمة";
 }
 
 /* ==========================================================
-   SEARCH WORD (ULTIMATE FIX)
+   SEARCH WORD FUNCTION
 ========================================================== */
 
 async function searchWord() {
@@ -45,44 +46,42 @@ async function searchWord() {
 
     if (!input || !resultBox) return;
 
-    // 🔥 ALWAYS FRESH VALUE
-    const word = String(input.value || "").trim();
+    const word = input.value.trim();
 
     if (!word) {
         showToast("Please enter a word.", "error");
         return;
     }
 
-    // 🔥 HARD RESET UI (prevent stale render)
-    resultBox.innerHTML = "";
+    // reset UI
     resultBox.classList.remove("hidden");
+    resultBox.innerHTML = `<p>Searching...</p>`;
 
     showLoader();
 
     try {
 
-        // 🔥 FORCE CACHE BYPASS
-        const response = await searchDictionary(word + "_" + Date.now());
+        // IMPORTANT: send clean word ONLY
+        const response = await searchDictionary(word);
 
         if (!response || !response.success) {
             resultBox.innerHTML = `<p class="text-danger">No definition found.</p>`;
             return;
         }
 
-        const dictionary = normalizeDictionaryResponse(response.data);
+        const data = normalizeDictionaryResponse(response.data);
 
-        if (!dictionary || !dictionary.success) {
+        if (!data || !data.success) {
             resultBox.innerHTML = `<p class="text-danger">No definition found.</p>`;
             return;
         }
 
-        // 🔥 FORCE OVERRIDE WITH CURRENT INPUT
-        dictionary.word = word;
-        dictionary.userWord = word;
+        // store original word safely
+        data.word = word;
 
         saveRecentSearch(word);
 
-        renderDictionaryResult(dictionary);
+        renderDictionaryResult(data);
 
     }
 
@@ -90,11 +89,11 @@ async function searchWord() {
 
         console.error(error);
 
-        showToast("Dictionary error.", "error");
+        showToast("Dictionary error", "error");
 
         resultBox.innerHTML = `
             <p class="text-danger">
-                Dictionary service is unavailable.
+                Service unavailable
             </p>
         `;
     }
@@ -113,12 +112,12 @@ function renderDictionaryResult(data) {
     const resultBox = document.getElementById("dictionaryResult");
     if (!resultBox) return;
 
-    const word = escapeHtml(data.word);
+    const word = escapeHtml(data.word || "");
     const phonetic = escapeHtml(data.phonetic || "N/A");
-    const favorite = isFavorite(data.word);
 
-    // 🔥 ALWAYS USE FRESH WORD
-    const arabic = getArabicTranslation(data.userWord || data.word);
+    const arabic = getArabicTranslation(data.word);
+
+    const favorite = isFavorite(data.word);
 
     let html = `
         <div class="dictionary-card">
@@ -141,8 +140,7 @@ function renderDictionaryResult(data) {
 
                 <button
                     class="favorite-btn"
-                    onclick="toggleDictionaryFavorite('${escapeHtml(data.word)}')"
-                    title="Favorite">
+                    onclick="toggleDictionaryFavorite('${word}')">
 
                     ${favorite ? "❤️" : "🤍"}
 
@@ -165,48 +163,37 @@ function renderDictionaryResult(data) {
             </div>
     `;
 
-    data.meanings.forEach(function (meaning) {
+    data.meanings?.forEach(meaning => {
 
         html += `
             <div class="meaning-block">
 
-                <h3>
-                    ${escapeHtml(meaning.partOfSpeech || "Unknown")}
-                </h3>
+                <h3>${escapeHtml(meaning.partOfSpeech || "Unknown")}</h3>
         `;
 
-        meaning.definitions.forEach(function (definition) {
+        meaning.definitions?.forEach(def => {
 
             html += `
                 <div class="definition">
 
-                    <p>
-                        • ${escapeHtml(definition.definition || "")}
-                    </p>
+                    <p>• ${escapeHtml(def.definition || "")}</p>
             `;
 
-            if (definition.example) {
-
+            if (def.example) {
                 html += `
                     <p class="example">
-                        Example: ${escapeHtml(definition.example)}
+                        Example: ${escapeHtml(def.example)}
                     </p>
                 `;
             }
 
-            html += `
-                </div>
-            `;
+            html += `</div>`;
         });
 
-        html += `
-            </div>
-        `;
+        html += `</div>`;
     });
 
-    html += `
-        </div>
-    `;
+    html += `</div>`;
 
     resultBox.innerHTML = html;
 }
@@ -223,36 +210,13 @@ function toggleDictionaryFavorite(word) {
 
     showToast(
         isFavorite(word)
-            ? "Added to favorites."
-            : "Removed from favorites."
+            ? "Added to favorites"
+            : "Removed from favorites"
     );
-
-    const input = document.getElementById("dictionaryInput");
-
-    if (
-        input &&
-        input.value.trim().toLowerCase() === word.toLowerCase()
-    ) {
-        searchWord();
-    }
 }
 
 /* ==========================================================
-   CLEAR
-========================================================== */
-
-function clearDictionaryResult() {
-
-    const resultBox = document.getElementById("dictionaryResult");
-
-    if (!resultBox) return;
-
-    resultBox.innerHTML = "";
-    resultBox.classList.add("hidden");
-}
-
-/* ==========================================================
-   ENTER KEY
+   ENTER SUPPORT
 ========================================================== */
 
 function initializeDictionary() {
@@ -261,10 +225,10 @@ function initializeDictionary() {
 
     if (!input) return;
 
-    input.addEventListener("keydown", function (event) {
+    input.addEventListener("keydown", (e) => {
 
-        if (event.key === "Enter") {
-            event.preventDefault();
+        if (e.key === "Enter") {
+            e.preventDefault();
             searchWord();
         }
 
