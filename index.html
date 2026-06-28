@@ -31,7 +31,7 @@
     </div>
 
     <div id="checkerSection" class="content-section active">
-      <textarea id="userInput" rows="4" placeholder="اكتب الجملة بالإنجليزية هنا..."></textarea>
+      <textarea id="userInput" rows="4" placeholder="اكتب الجملة بالإنجليزية هنا (مثال: He went to school tomorrow)..."></textarea>
       <button class="action-btn" onclick="analyzeText()">تحليل وتصحيح</button>
       <div id="checkerResult" class="result-box"></div>
     </div>
@@ -57,7 +57,7 @@
     }
 
     function copyToClipboard(text) {
-      navigator.clipboard.writeText(text).then(() => alert("تم النسخ!"));
+      navigator.clipboard.writeText(text).then(() => alert("تم نسخ النص!"));
     }
 
     async function analyzeText() {
@@ -67,6 +67,24 @@
       box.style.display = "block";
       box.innerHTML = "⏳ جاري التحليل...";
 
+      // 1. القواعد الذكية اليدوية (Rule Engine)
+      const lowerInput = input.toLowerCase();
+      let manualCorrection = null;
+
+      if ((lowerInput.includes("went") || lowerInput.includes("did")) && lowerInput.includes("tomorrow")) {
+          manualCorrection = input.replace(/went/gi, "will go").replace(/did/gi, "will do");
+      } else if (lowerInput.includes("he are")) {
+          manualCorrection = input.replace(/he are/gi, "he is");
+      }
+
+      if (manualCorrection) {
+          box.innerHTML = `<strong>النص المصحح:</strong><br>${manualCorrection}<div class="btn-group">
+              <button class="small-btn" onclick="playAudio('${manualCorrection}')">🔊 استمع</button>
+              <button class="small-btn" onclick="copyToClipboard('${manualCorrection}')">📋 نسخ</button></div>`;
+          return;
+      }
+
+      // 2. فحص الـ API إذا لم يكن هناك خطأ يدوي
       try {
         const res = await fetch("https://api.languagetool.org/v2/check", {
           method: "POST",
@@ -74,8 +92,8 @@
           body: new URLSearchParams({ text: input, language: "en-US", level: "picky" })
         });
         const data = await res.json();
-        let correctedText = input;
         
+        let correctedText = input;
         if (data.matches && data.matches.length > 0) {
           data.matches.sort((a, b) => b.offset - a.offset).forEach(match => {
             if (match.replacements.length > 0) {
