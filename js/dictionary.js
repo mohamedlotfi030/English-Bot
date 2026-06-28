@@ -1,7 +1,13 @@
+/* ==========================================================
+   English-Bot
+   dictionary.js
+   FINAL STABLE VERSION
+========================================================== */
+
 "use strict";
 
 /* ==========================================================
-   AUTO AI DICTIONARY (NO MANUAL DATA)
+   API: ENGLISH DICTIONARY
 ========================================================== */
 
 async function searchDictionary(word) {
@@ -15,7 +21,7 @@ async function searchDictionary(word) {
         const data = await res.json();
 
         if (!Array.isArray(data)) {
-            throw new Error("No data");
+            return { success: false };
         }
 
         const entry = data[0];
@@ -25,7 +31,6 @@ async function searchDictionary(word) {
 
         const synonyms = meaning?.synonyms || [];
 
-        // 🔥 Arabic translation API
         const arabic = await translateToArabic(word);
 
         return {
@@ -39,17 +44,16 @@ async function searchDictionary(word) {
             }
         };
 
-    } catch (e) {
+    } catch (err) {
 
-        return {
-            success: false,
-            error: "Not found"
-        };
+        console.error("API Error:", err);
+
+        return { success: false };
     }
 }
 
 /* ==========================================================
-   TRANSLATION ENGINE (AUTO ARABIC)
+   ARABIC TRANSLATION API
 ========================================================== */
 
 async function translateToArabic(word) {
@@ -64,18 +68,19 @@ async function translateToArabic(word) {
 
         return data?.responseData?.translatedText || "لا توجد ترجمة";
 
-    } catch (e) {
+    } catch (err) {
+
         return "لا توجد ترجمة";
     }
 }
 
 /* ==========================================================
-   NORMALIZE (KEEP COMPATIBILITY)
+   NORMALIZER
 ========================================================== */
 
 function normalizeDictionaryResponse(data) {
 
-    if (!data) return { success: false };
+    if (!data) return null;
 
     return {
         success: true,
@@ -88,7 +93,7 @@ function normalizeDictionaryResponse(data) {
 }
 
 /* ==========================================================
-   SEARCH WORD (UI HOOK)
+   SEARCH WORD (MAIN FUNCTION)
 ========================================================== */
 
 async function searchWord() {
@@ -96,38 +101,68 @@ async function searchWord() {
     const input = document.getElementById("dictionaryInput");
     const resultBox = document.getElementById("dictionaryResult");
 
+    if (!input || !resultBox) return;
+
     const word = input.value.trim();
 
     if (!word) {
-        showToast("Enter a word", "error");
+        showToast("Please enter a word", "error");
         return;
     }
 
-    resultBox.innerHTML = `<p>Searching...</p>`;
-    showLoader();
+    try {
 
-    const response = await searchDictionary(word);
+        resultBox.classList.remove("hidden");
+        resultBox.innerHTML = `<p>Searching...</p>`;
 
-    if (!response.success) {
-        resultBox.innerHTML = `<p>No definition found</p>`;
+        showLoader();
+
+        const response = await searchDictionary(word);
+
+        console.log("Dictionary Response:", response);
+
+        if (!response || !response.success) {
+            resultBox.innerHTML = `<p>No definition found</p>`;
+            return;
+        }
+
+        const data = normalizeDictionaryResponse(response.data);
+
+        if (!data) {
+            resultBox.innerHTML = `<p>Error processing data</p>`;
+            return;
+        }
+
+        renderDictionaryResult(data);
+
+    }
+
+    catch (err) {
+
+        console.error(err);
+
+        resultBox.innerHTML = `
+            <p style="color:red;">
+                Dictionary error occurred
+            </p>
+        `;
+
+    }
+
+    finally {
         hideLoader();
-        return;
     }
-
-    const data = normalizeDictionaryResponse(response.data);
-
-    renderDictionaryResult(data);
-
-    hideLoader();
 }
 
 /* ==========================================================
-   RENDER
+   RENDER RESULT
 ========================================================== */
 
 function renderDictionaryResult(data) {
 
     const box = document.getElementById("dictionaryResult");
+
+    if (!box) return;
 
     box.innerHTML = `
         <div class="dictionary-card">
@@ -139,15 +174,19 @@ function renderDictionaryResult(data) {
             </p>
 
             <p class="phonetic">
-                ${data.phonetic}
+                ${data.phonetic || ""}
             </p>
 
             <p class="definition">
-                📘 ${data.definition}
+                📘 ${data.definition || ""}
             </p>
 
             <div class="synonyms">
-                🔁 ${data.synonyms?.length ? data.synonyms.join(", ") : "None"}
+                🔁 ${
+                    data.synonyms && data.synonyms.length
+                        ? data.synonyms.join(", ")
+                        : "None"
+                }
             </div>
 
         </div>
@@ -155,15 +194,19 @@ function renderDictionaryResult(data) {
 }
 
 /* ==========================================================
-   INIT
+   ENTER SUPPORT
 ========================================================== */
 
 document.addEventListener("DOMContentLoaded", () => {
 
     const input = document.getElementById("dictionaryInput");
 
-    input?.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") searchWord();
-    });
+    if (!input) return;
 
+    input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            searchWord();
+        }
+    });
 });
