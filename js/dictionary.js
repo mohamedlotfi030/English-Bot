@@ -1,13 +1,13 @@
 /* ==========================================================
    English-Bot
    dictionary.js
-   FINAL STABLE VERSION
+   FINAL VERSION (FULL FEATURES + PRONUNCIATION FIX)
 ========================================================== */
 
 "use strict";
 
 /* ==========================================================
-   API: ENGLISH DICTIONARY
+   SEARCH DICTIONARY API
 ========================================================== */
 
 async function searchDictionary(word) {
@@ -27,9 +27,25 @@ async function searchDictionary(word) {
         const entry = data[0];
 
         const meaning = entry?.meanings?.[0];
-        const definition = meaning?.definitions?.[0]?.definition || "";
 
-        const synonyms = meaning?.synonyms || [];
+        const definition =
+            meaning?.definitions?.[0]?.definition || "";
+
+        const synonyms =
+            meaning?.synonyms || [];
+
+        /* ======================================================
+           FIX: PHONETIC PRONUNCIATION (IMPORTANT)
+        ====================================================== */
+
+        const phonetic =
+            entry?.phonetic ||
+            entry?.phonetics?.find(p => p.text)?.text ||
+            "";
+
+        /* ======================================================
+           ARABIC TRANSLATION (AUTO API)
+        ====================================================== */
 
         const arabic = await translateToArabic(word);
 
@@ -37,16 +53,16 @@ async function searchDictionary(word) {
             success: true,
             data: {
                 word: entry.word,
-                phonetic: entry.phonetic || "",
-                definition,
-                synonyms,
-                arabic
+                phonetic: phonetic,
+                definition: definition,
+                synonyms: synonyms,
+                arabic: arabic
             }
         };
 
-    } catch (err) {
+    } catch (error) {
 
-        console.error("API Error:", err);
+        console.error("Dictionary API Error:", error);
 
         return { success: false };
     }
@@ -68,7 +84,7 @@ async function translateToArabic(word) {
 
         return data?.responseData?.translatedText || "لا توجد ترجمة";
 
-    } catch (err) {
+    } catch (error) {
 
         return "لا توجد ترجمة";
     }
@@ -93,7 +109,7 @@ function normalizeDictionaryResponse(data) {
 }
 
 /* ==========================================================
-   SEARCH WORD (MAIN FUNCTION)
+   SEARCH FUNCTION (MAIN ENTRY)
 ========================================================== */
 
 async function searchWord() {
@@ -137,16 +153,15 @@ async function searchWord() {
 
     }
 
-    catch (err) {
+    catch (error) {
 
-        console.error(err);
+        console.error(error);
 
         resultBox.innerHTML = `
             <p style="color:red;">
                 Dictionary error occurred
             </p>
         `;
-
     }
 
     finally {
@@ -155,7 +170,7 @@ async function searchWord() {
 }
 
 /* ==========================================================
-   RENDER RESULT
+   RENDER RESULT (WITH PRONUNCIATION)
 ========================================================== */
 
 function renderDictionaryResult(data) {
@@ -174,8 +189,13 @@ function renderDictionaryResult(data) {
             </p>
 
             <p class="phonetic">
-                ${data.phonetic || ""}
+                🔊 ${data.phonetic || "Not available"}
             </p>
+
+            <button class="audio-btn"
+                onclick='speak(${JSON.stringify(data.word)}, "en-US")'>
+                ▶ Play Pronunciation
+            </button>
 
             <p class="definition">
                 📘 ${data.definition || ""}
@@ -194,7 +214,7 @@ function renderDictionaryResult(data) {
 }
 
 /* ==========================================================
-   ENTER SUPPORT
+   ENTER KEY SUPPORT
 ========================================================== */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -204,9 +224,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!input) return;
 
     input.addEventListener("keydown", (e) => {
+
         if (e.key === "Enter") {
             e.preventDefault();
             searchWord();
         }
+
     });
 });
