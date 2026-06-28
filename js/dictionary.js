@@ -1,7 +1,7 @@
 /* ==========================================================
    English-Bot
    dictionary.js
-   FINAL VERSION - Arabic Fix + Stable Logic
+   FINAL FIX - Stable Rendering + Arabic Fix
 ========================================================== */
 
 "use strict";
@@ -56,6 +56,8 @@ async function searchWord() {
     showLoader();
 
     resultBox.classList.remove("hidden");
+
+    // 🔥 IMPORTANT: force clear old result to prevent stale UI
     resultBox.innerHTML = `<p>Searching dictionary...</p>`;
 
     try {
@@ -74,6 +76,9 @@ async function searchWord() {
         }
 
         saveRecentSearch(word);
+
+        // 🔥 FIX: attach current user input explicitly
+        dictionary.userWord = word;
 
         renderDictionaryResult(dictionary);
 
@@ -98,7 +103,7 @@ async function searchWord() {
 }
 
 /* ==========================================================
-   Render Result
+   Render Dictionary Result
 ========================================================== */
 
 function renderDictionaryResult(data) {
@@ -106,11 +111,14 @@ function renderDictionaryResult(data) {
     const resultBox = document.getElementById("dictionaryResult");
     if (!resultBox) return;
 
+    // 🔥 ALWAYS recompute Arabic from latest word
+    const arabic = getArabicTranslation(
+        data.userWord || data.word
+    );
+
     const word = escapeHtml(data.word);
     const phonetic = escapeHtml(data.phonetic || "N/A");
     const favorite = isFavorite(data.word);
-
-    const arabic = getArabicTranslation(data.word);
 
     let html = `
         <div class="dictionary-card">
