@@ -1,18 +1,24 @@
 /* ==========================================================
    English-Bot
    dictionary.js
-   FINAL FIX (Arabic Support Added Safely)
+   FINAL VERSION - Arabic Fix + Stable Logic
 ========================================================== */
 
 "use strict";
 
 /* ==========================================================
-   Arabic Translation Helper
+   Arabic Translation Engine
 ========================================================== */
 
 function getArabicTranslation(word) {
 
+    if (!word) return "لا توجد ترجمة";
+
+    const clean = word.toLowerCase().trim();
+
     const map = {
+
+        play: "يلعب / مسرحية / لعب",
         book: "كتاب",
         car: "سيارة",
         house: "منزل",
@@ -22,13 +28,14 @@ function getArabicTranslation(word) {
         school: "مدرسة",
         teacher: "معلم",
         student: "طالب"
+
     };
 
-    return map[word.toLowerCase()] || "لا توجد ترجمة";
+    return map[clean] || "لا توجد ترجمة";
 }
 
 /* ==========================================================
-   Search Dictionary
+   Search Word
 ========================================================== */
 
 async function searchWord() {
@@ -68,9 +75,6 @@ async function searchWord() {
 
         saveRecentSearch(word);
 
-        // 🔥 SAFE FIX: ensure Arabic exists
-        dictionary.arabic = dictionary.arabic || getArabicTranslation(dictionary.word);
-
         renderDictionaryResult(dictionary);
 
     }
@@ -94,7 +98,7 @@ async function searchWord() {
 }
 
 /* ==========================================================
-   Render Dictionary Result
+   Render Result
 ========================================================== */
 
 function renderDictionaryResult(data) {
@@ -106,6 +110,8 @@ function renderDictionaryResult(data) {
     const phonetic = escapeHtml(data.phonetic || "N/A");
     const favorite = isFavorite(data.word);
 
+    const arabic = getArabicTranslation(data.word);
+
     let html = `
         <div class="dictionary-card">
 
@@ -116,7 +122,7 @@ function renderDictionaryResult(data) {
                     <h2>${word}</h2>
 
                     <p class="arabic-translation">
-                        🇸🇦 ${escapeHtml(data.arabic || getArabicTranslation(data.word))}
+                        🇸🇦 ${escapeHtml(arabic)}
                     </p>
 
                     <p class="phonetic">
@@ -138,14 +144,12 @@ function renderDictionaryResult(data) {
 
             <div class="audio-group">
 
-                <button
-                    class="audio-btn"
+                <button class="audio-btn"
                     onclick='speak(${JSON.stringify(data.word)},"en-US")'>
                     🇺🇸 US
                 </button>
 
-                <button
-                    class="audio-btn"
+                <button class="audio-btn"
                     onclick='speak(${JSON.stringify(data.word)},"en-GB")'>
                     🇬🇧 UK
                 </button>
@@ -200,7 +204,7 @@ function renderDictionaryResult(data) {
 }
 
 /* ==========================================================
-   Favorite Toggle
+   Favorite System
 ========================================================== */
 
 function toggleDictionaryFavorite(word) {
