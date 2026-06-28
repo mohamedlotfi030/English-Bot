@@ -1,170 +1,112 @@
 /* ==========================================================
    English-Bot
    dictionary.js
-   Version 1.1
+   FINAL FIX (Arabic Support Added Safely)
 ========================================================== */
 
 "use strict";
 
 /* ==========================================================
+   Arabic Translation Helper
+========================================================== */
+
+function getArabicTranslation(word) {
+
+    const map = {
+        book: "كتاب",
+        car: "سيارة",
+        house: "منزل",
+        computer: "حاسوب",
+        water: "ماء",
+        love: "حب",
+        school: "مدرسة",
+        teacher: "معلم",
+        student: "طالب"
+    };
+
+    return map[word.toLowerCase()] || "لا توجد ترجمة";
+}
+
+/* ==========================================================
    Search Dictionary
 ========================================================== */
 
-/**
- * Search for an English word.
- */
-
-async function searchWord(){
+async function searchWord() {
 
     const input = document.getElementById("dictionaryInput");
-
     const resultBox = document.getElementById("dictionaryResult");
 
-    if(!input || !resultBox){
-
-        return;
-
-    }
+    if (!input || !resultBox) return;
 
     const word = input.value.trim();
 
-    if(!word){
-
-        showToast(
-
-            "Please enter a word.",
-
-            "error"
-
-        );
-
+    if (!word) {
+        showToast("Please enter a word.", "error");
         input.focus();
-
         return;
-
     }
 
     showLoader();
 
     resultBox.classList.remove("hidden");
+    resultBox.innerHTML = `<p>Searching dictionary...</p>`;
 
-    resultBox.innerHTML = `
-
-        <p>
-
-            Searching dictionary...
-
-        </p>
-
-    `;
-
-    try{
+    try {
 
         const response = await searchDictionary(word);
 
-        if(!response.success){
-
-            throw new Error(
-
-                response.error ||
-
-                "Dictionary request failed."
-
-            );
-
+        if (!response.success) {
+            throw new Error(response.error || "Dictionary request failed.");
         }
 
-        const dictionary =
+        const dictionary = normalizeDictionaryResponse(response.data);
 
-            normalizeDictionaryResponse(
-
-                response.data
-
-            );
-
-        if(!dictionary.success){
-
-            resultBox.innerHTML = `
-
-                <p class="text-danger">
-
-                    No definition found.
-
-                </p>
-
-            `;
-
+        if (!dictionary.success) {
+            resultBox.innerHTML = `<p class="text-danger">No definition found.</p>`;
             return;
-
         }
 
         saveRecentSearch(word);
+
+        // 🔥 SAFE FIX: ensure Arabic exists
+        dictionary.arabic = dictionary.arabic || getArabicTranslation(dictionary.word);
 
         renderDictionaryResult(dictionary);
 
     }
 
-    catch(error){
+    catch (error) {
 
         console.error(error);
 
-        showToast(
-
-            "Unable to search dictionary.",
-
-            "error"
-
-        );
+        showToast("Unable to search dictionary.", "error");
 
         resultBox.innerHTML = `
-
             <p class="text-danger">
-
                 Dictionary service is unavailable.
-
             </p>
-
         `;
-
     }
 
-    finally{
-
+    finally {
         hideLoader();
-
     }
-
 }
+
 /* ==========================================================
    Render Dictionary Result
 ========================================================== */
 
-function renderDictionaryResult(data){
+function renderDictionaryResult(data) {
 
-    const resultBox = document.getElementById(
-
-        "dictionaryResult"
-
-    );
-
-    if(!resultBox){
-
-        return;
-
-    }
+    const resultBox = document.getElementById("dictionaryResult");
+    if (!resultBox) return;
 
     const word = escapeHtml(data.word);
-
-    const phonetic = escapeHtml(
-
-        data.phonetic || "N/A"
-
-    );
-
+    const phonetic = escapeHtml(data.phonetic || "N/A");
     const favorite = isFavorite(data.word);
 
     let html = `
-
         <div class="dictionary-card">
 
             <div class="dictionary-header">
@@ -173,24 +115,19 @@ function renderDictionaryResult(data){
 
                     <h2>${word}</h2>
 
-<p class="arabic-translation">
-    🇸🇦 ${escapeHtml(data.arabic || "No Arabic translation")}
-</p>
+                    <p class="arabic-translation">
+                        🇸🇦 ${escapeHtml(data.arabic || getArabicTranslation(data.word))}
+                    </p>
 
                     <p class="phonetic">
-
                         ${phonetic}
-
                     </p>
 
                 </div>
 
                 <button
-
                     class="favorite-btn"
-
                     onclick="toggleDictionaryFavorite('${escapeHtml(data.word)}')"
-
                     title="Favorite">
 
                     ${favorite ? "❤️" : "🤍"}
@@ -202,234 +139,132 @@ function renderDictionaryResult(data){
             <div class="audio-group">
 
                 <button
-
                     class="audio-btn"
-
                     onclick='speak(${JSON.stringify(data.word)},"en-US")'>
-
                     🇺🇸 US
-
                 </button>
 
                 <button
-
                     class="audio-btn"
-
                     onclick='speak(${JSON.stringify(data.word)},"en-GB")'>
-
                     🇬🇧 UK
-
                 </button>
 
             </div>
-
     `;
 
-    data.meanings.forEach(function(meaning){
+    data.meanings.forEach(function (meaning) {
 
         html += `
-
             <div class="meaning-block">
 
                 <h3>
-
-                    ${escapeHtml(
-
-                        meaning.partOfSpeech ||
-
-                        "Unknown"
-
-                    )}
-
+                    ${escapeHtml(meaning.partOfSpeech || "Unknown")}
                 </h3>
-
         `;
 
-        meaning.definitions.forEach(function(definition){
+        meaning.definitions.forEach(function (definition) {
 
             html += `
-
                 <div class="definition">
 
                     <p>
-
-                        • ${escapeHtml(
-
-                            definition.definition ||
-
-                            ""
-
-                        )}
-
+                        • ${escapeHtml(definition.definition || "")}
                     </p>
-
             `;
 
-            if(definition.example){
+            if (definition.example) {
 
                 html += `
-
                     <p class="example">
-
-                        Example:
-
-                        ${escapeHtml(
-
-                            definition.example
-
-                        )}
-
+                        Example: ${escapeHtml(definition.example)}
                     </p>
-
                 `;
-
             }
 
             html += `
-
                 </div>
-
             `;
-
         });
 
         html += `
-
             </div>
-
         `;
-
     });
 
     html += `
-
         </div>
-
     `;
 
     resultBox.innerHTML = html;
-
 }
+
 /* ==========================================================
-   Favorite
+   Favorite Toggle
 ========================================================== */
 
-function toggleDictionaryFavorite(word){
+function toggleDictionaryFavorite(word) {
 
-    if(!word){
-
-        return;
-
-    }
+    if (!word) return;
 
     toggleFavorite(word);
 
     showToast(
-
         isFavorite(word)
-
             ? "Added to favorites."
-
             : "Removed from favorites."
-
     );
 
-    const input = document.getElementById(
+    const input = document.getElementById("dictionaryInput");
 
-        "dictionaryInput"
-
-    );
-
-    if(
-
+    if (
         input &&
-
-        input.value.trim().toLowerCase() ===
-
-        word.toLowerCase()
-
-    ){
-
+        input.value.trim().toLowerCase() === word.toLowerCase()
+    ) {
         searchWord();
-
     }
-
 }
 
 /* ==========================================================
    Clear Result
 ========================================================== */
 
-function clearDictionaryResult(){
+function clearDictionaryResult() {
 
-    const resultBox = document.getElementById(
+    const resultBox = document.getElementById("dictionaryResult");
 
-        "dictionaryResult"
-
-    );
-
-    if(!resultBox){
-
-        return;
-
-    }
+    if (!resultBox) return;
 
     resultBox.innerHTML = "";
-
     resultBox.classList.add("hidden");
-
 }
 
 /* ==========================================================
    Enter Key Support
 ========================================================== */
 
-function initializeDictionary(){
+function initializeDictionary() {
 
-    const input = document.getElementById(
+    const input = document.getElementById("dictionaryInput");
 
-        "dictionaryInput"
+    if (!input) return;
 
-    );
+    input.addEventListener("keydown", function (event) {
 
-    if(!input){
-
-        return;
-
-    }
-
-    input.addEventListener(
-
-        "keydown",
-
-        function(event){
-
-            if(event.key === "Enter"){
-
-                event.preventDefault();
-
-                searchWord();
-
-            }
-
+        if (event.key === "Enter") {
+            event.preventDefault();
+            searchWord();
         }
 
-    );
-
+    });
 }
 
 /* ==========================================================
-   Auto Initialize
+   Auto Init
 ========================================================== */
 
-document.addEventListener(
-
-    "DOMContentLoaded",
-
-    initializeDictionary
-
-);
+document.addEventListener("DOMContentLoaded", initializeDictionary);
 
 /* ==========================================================
-   End of dictionary.js
+   End
 ========================================================== */
