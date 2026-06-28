@@ -2,147 +2,90 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>المساعد اللغوي الاحترافي (Hybrid Engine)</title>
+  <title>المساعد اللغوي - النسخة الموسعة</title>
   <style>
-    body { background-color: #0f172a; color: #f1f5f9; font-family: 'Segoe UI', sans-serif; padding: 20px; }
-    .container { max-width: 650px; margin: auto; background-color: #1e293b; padding: 25px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-    .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-    .tab-btn { flex: 1; background: #334155; border: none; color: #cbd5e1; padding: 12px; cursor: pointer; border-radius: 8px; transition: 0.3s; }
-    .tab-btn.active { background: #5850ec; color: white; }
-    .content-section { display: none; }
-    .content-section.active { display: block; }
-    .result-box { margin-top: 20px; padding: 15px; background: #0f172a; border-left: 5px solid #5850ec; text-align: left; direction: ltr; min-height: 50px; }
-    .action-btn { background: #5850ec; color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; cursor: pointer; font-weight: bold; }
-    textarea { width: 100%; background: #0f172a; color: white; border: 1px solid #475569; padding: 12px; border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; resize: vertical; }
-    .audio-group { margin-top: 10px; display: flex; gap: 5px; }
-    .audio-btn { background: #334155; border: none; color: white; padding: 6px 10px; border-radius: 5px; cursor: pointer; font-size: 11px; }
-    .vocab-nav { display: flex; gap: 5px; margin-bottom: 15px; }
-    .vocab-btn { background: #1e293b; border: 1px solid #5850ec; color: #cbd5e1; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px; }
-    .vocab-btn.active { background: #5850ec; color: white; }
-    .word-chip { background: #334155; padding: 5px; border-radius: 4px; cursor: pointer; font-size: 12px; margin: 2px; display: inline-block; }
+    body { background-color: #0f172a; color: #f1f5f9; font-family: sans-serif; padding: 20px; }
+    .container { max-width: 700px; margin: auto; background-color: #1e293b; padding: 20px; border-radius: 16px; }
+    .vocab-nav { display: flex; gap: 5px; margin-bottom: 10px; }
+    .vocab-btn { background: #334155; color: white; border: none; padding: 8px 12px; cursor: pointer; border-radius: 5px; font-size: 13px; }
+    .vocab-btn.active { background: #5850ec; }
+    .word-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 5px; height: 250px; overflow-y: auto; background: #0f172a; padding: 10px; border-radius: 8px; }
+    .word-chip { background: #1e293b; padding: 6px; border-radius: 4px; cursor: pointer; font-size: 11px; text-align: center; border: 1px solid #334155; }
+    .word-chip:hover { border-color: #5850ec; }
+    .result-box { margin-top: 20px; padding: 15px; background: #0f172a; border-right: 5px solid #5850ec; direction: ltr; text-align: left; }
+    .action-btn { background: #5850ec; color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; cursor: pointer; }
+    textarea { width: 100%; background: #0f172a; color: white; border: 1px solid #475569; padding: 12px; border-radius: 8px; margin-bottom: 10px; }
   </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('checker')">التصحيح الذكي</button>
-        <button class="tab-btn" onclick="switchTab('dictionary')">القاموس والمستوى</button>
-    </div>
-
-    <div id="checkerSection" class="content-section active">
-        <textarea id="userInput" rows="4" placeholder="اكتب جملة هنا... (جرب: I is go to school)"></textarea>
+    <div id="checkerSection">
+        <textarea id="userInput" rows="3" placeholder="اكتب جملتك هنا..."></textarea>
         <button class="action-btn" onclick="processText()">تحليل وتصحيح</button>
         <div id="checkerResult" class="result-box" style="display:none;"></div>
     </div>
-
-    <div id="dictionarySection" class="content-section">
+    
+    <div style="margin-top:20px;">
         <div class="vocab-nav" id="levelNav"></div>
-        <div id="wordList" style="margin-bottom:15px;"></div>
-        <input type="text" id="wordInput" placeholder="أو ابحث عن كلمة...">
-        <button class="action-btn" onclick="searchWord()">بحث</button>
-        <div id="dictionaryResult" class="result-box" style="display:none;"></div>
+        <div id="wordList" class="word-list"></div>
     </div>
 </div>
 
 <script>
-    // --- قواعد الـ Regex المتقدمة ---
+    // --- 1. القاموس الموسع ---
+    const vocabData = {
+        B2: ["Ambiguous", "Beneficial", "Consistent", "Establish", "Evaluate", "Fundamental", "Generate", "Hypothesis", "Implement", "Objective", "Promote", "Significant", "Sustain", "Theoretical", "Underestimate", "Apparent", "Capacity", "Challenge", "Dilemma", "Diligent", "Emerge", "Eloquent", "Framework", "Fascinating", "Genuine", "Initiative", "Inevitable", "Justify", "Knowledgeable", "Lucrative"],
+        C1: ["Advocate", "Coherent", "Compromise", "Constitute", "Discrepancy", "Eloquent", "Indispensable", "Meticulous", "Pragmatic", "Redundant", "Scrutinize", "Subsequent", "Trivial", "Vulnerable", "Zealous", "Acquire", "Arbitrary", "Assert", "Convey", "Denote", "Deviate", "Emphasize", "Enhance", "Exceed", "Extract", "Fluctuate", "Hypothesize", "Illustrate", "Interpret", "Incorporate"],
+        C2: ["Ephemeral", "Exacerbate", "Immutable", "Inherent", "Juxtapose", "Paradigm", "Quintessential", "Repercussion", "Superfluous", "Ubiquitous", "Unprecedented", "Vicarious", "Widespread", "Yield", "Zenith", "Abstain", "Alleviate", "Ameliorate", "Anomalous", "Apathy", "Audacious", "Benevolent", "Capricious", "Candid", "Complacent", "Conspicuous", "Delineate", "Despot", "Ebullient", "Eclectic"]
+    };
+
+    // --- 2. محرك القواعد المطور (Regex Wildcards) ---
     const grammarRules = [
         { regex: /\b(we|they)\s+is\b/gi, replacement: "$1 are" },
-        { regex: /\b(he|she|it)\s+are\b/gi, replacement: "$1 is" },
-        { regex: /\b(he|she|it)\s+do\b/gi, replacement: "$1 does" },
-        { regex: /\ba\s+(apple|orange|egg|ice|umbrella)\b/gi, replacement: "an $1" },
-        { regex: /\bwent\s+tomorrow\b/gi, replacement: "will go tomorrow" },
-        { regex: /\bwill go\s+yesterday\b/gi, replacement: "went yesterday" },
-        { regex: /\b(i|we|they|you)\s+doesn't\b/gi, replacement: "$1 don't" }
+        { regex: /\bwent\s+.*?tomorrow\b/gi, replacement: "will go tomorrow" }, // القاعدة المحسنة
+        { regex: /\bwill go\s+.*?yesterday\b/gi, replacement: "went yesterday" }
     ];
 
-    // --- الوظائف ---
-    function speak(text, lang) {
-        const u = new SpeechSynthesisUtterance(text);
-        u.lang = lang;
-        window.speechSynthesis.speak(u);
-    }
-
-    function getAudioButtons(text) {
-        return `<div class="audio-group">
-                    <button class="audio-btn" onclick="speak('${text.replace(/'/g, "\\'")}', 'en-US')">🔊 US</button>
-                    <button class="audio-btn" onclick="speak('${text.replace(/'/g, "\\'")}', 'en-GB')">🔊 UK</button>
-                </div>`;
-    }
-
     async function processText() {
-        const input = document.getElementById("userInput").value.trim();
+        let text = document.getElementById("userInput").value.trim();
         const box = document.getElementById("checkerResult");
-        if (!input) return;
-        
         box.style.display = "block";
-        box.innerHTML = "⏳ جاري التحليل النحوي والمنطقي...";
+        box.innerHTML = "⏳ تحليل...";
 
-        let text = input;
-        // 1. تطبيق القواعد اليدوية (Manual Rules)
+        // تطبيق القواعد
         grammarRules.forEach(rule => text = text.replace(rule.regex, rule.replacement));
 
-        // 2. طلب API (LanguageTool)
+        // طلب الـ API للتحقق العميق
         try {
             const res = await fetch("https://api.languagetool.org/v2/check", {
                 method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
                 body: new URLSearchParams({ text: text, language: "en-US", level: "picky" })
             });
             const data = await res.json();
-            
-            // تطبيق كافة التعديلات من النهاية للبداية (لتجنب تداخل الـ Indices)
             if (data.matches && data.matches.length > 0) {
-                data.matches.sort((a, b) => b.offset - a.offset).forEach(match => {
-                    if (match.replacements.length > 0) {
-                        text = text.substring(0, match.offset) + match.replacements[0].value + text.substring(match.offset + match.length);
-                    }
+                data.matches.sort((a, b) => b.offset - a.offset).forEach(m => {
+                    text = text.substring(0, m.offset) + m.replacements[0].value + text.substring(m.offset + m.length);
                 });
             }
-            box.innerHTML = `<strong>النص المصحح:</strong><br>${text} ${getAudioButtons(text)}`;
-        } catch(e) {
-            box.innerHTML = `<strong>النص بعد التصحيح اليدوي:</strong><br>${text} ${getAudioButtons(text)}`;
-        }
+            box.innerHTML = `<strong>Correction:</strong><br>${text}`;
+        } catch(e) { box.innerHTML = `<strong>Result:</strong><br>${text}`; }
     }
 
-    // --- القاموس والمستويات ---
-    const vocabData = { B2: ["Ambiguous", "Beneficial"], C1: ["Advocate", "Coherent"], C2: ["Ephemeral", "Exacerbate"] };
-    
-    function switchTab(tab) {
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.innerText.includes(tab === 'checker' ? 'التصحيح' : 'القاموس')));
-        document.querySelectorAll('.content-section').forEach(s => s.classList.toggle('active', s.id === tab + 'Section'));
+    // --- تهيئة الواجهة ---
+    function renderWords(level) {
+        document.querySelectorAll('.vocab-btn').forEach(b => b.classList.toggle('active', b.innerText === level));
+        document.getElementById('wordList').innerHTML = vocabData[level].map(w => `<div class="word-chip">${w}</div>`).join('');
     }
 
-    async function searchWord(w = null) {
-        const word = w || document.getElementById("wordInput").value.trim();
-        if (!word) return;
-        const box = document.getElementById("dictionaryResult");
-        box.style.display = "block";
-        box.innerHTML = "⏳ بحث...";
-        
-        try {
-            const [ar, en] = await Promise.all([
-                fetch(`https://api.mymemory.translated.net/get?q=${word}&langpair=en|ar`).then(r => r.json()),
-                fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`).then(r => r.ok ? r.json() : null)
-            ]);
-            const def = en ? en[0].meanings[0].definitions[0].definition : "No definition.";
-            const ex = en && en[0].meanings[0].definitions[0].example ? en[0].meanings[0].definitions[0].example : "No example.";
-            box.innerHTML = `<strong>${word}</strong><br>Arabic: ${ar.responseData.translatedText}<br>Def: ${def}<br>Ex: "${ex}" ${getAudioButtons(word)}`;
-        } catch(e) { box.innerHTML = "⚠️ لم يتم العثور على الكلمة."; }
-    }
-
-    // تهيئة الواجهة
     Object.keys(vocabData).forEach(level => {
         const btn = document.createElement('button');
         btn.className = 'vocab-btn';
         btn.innerText = level;
-        btn.onclick = () => {
-            document.querySelectorAll('.vocab-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            document.getElementById('wordList').innerHTML = vocabData[level].map(w => `<span class="word-chip" onclick="searchWord('${w}')">${w}</span>`).join('');
-        };
+        btn.onclick = () => renderWords(level);
         document.getElementById('levelNav').appendChild(btn);
     });
+    renderWords('B2');
 </script>
 </body>
 </html>
