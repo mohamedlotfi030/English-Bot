@@ -3,43 +3,36 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>المساعد الشخصي للغة الإنجليزية</title>
+  <title>المساعد والقاموس الذكي</title>
   <style>
-    body { background-color: #0f172a; color: #f1f5f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; margin: 0; }
-    .container { max-width: 700px; margin: auto; background-color: #1e293b; padding: 25px; border-radius: 16px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); }
+    body { background-color: #0f172a; color: #f1f5f9; font-family: sans-serif; padding: 20px; margin: 0; }
+    .container { max-width: 600px; margin: auto; background-color: #1e293b; padding: 25px; border-radius: 16px; }
     .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-    .tab-btn { flex: 1; background: #334155; border: none; color: #cbd5e1; padding: 12px; cursor: pointer; border-radius: 8px; transition: 0.3s; }
+    .tab-btn { flex: 1; background: #334155; border: none; color: #cbd5e1; padding: 12px; cursor: pointer; border-radius: 8px; }
     .tab-btn.active { background: #5850ec; color: white; }
     .content-section { display: none; }
     .content-section.active { display: block; }
     textarea, input { width: 100%; background: #0f172a; color: white; border: 1px solid #475569; padding: 12px; border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; }
-    .action-btn { background: #5850ec; color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
-    .action-btn:hover { background: #4338ca; }
+    .action-btn { background: #5850ec; color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; cursor: pointer; font-weight: bold; }
     .result-box { margin-top: 20px; padding: 15px; border-radius: 10px; background: #0f172a; display: none; border-right: 5px solid #5850ec; }
-    .btn-group { display: flex; gap: 5px; margin-top: 10px; }
-    .small-btn { background: #334155; border: none; color: white; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
-    .word-chip { display: inline-block; background: #334155; padding: 6px 12px; margin: 3px; border-radius: 20px; cursor: pointer; font-size: 13px; transition: 0.2s; }
-    .word-chip:hover { background: #5850ec; }
+    .small-btn { background: #334155; border: none; color: white; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; margin: 2px; }
   </style>
 </head>
 <body>
 
   <div class="container">
     <div class="tabs">
-      <button id="checkerBtn" class="tab-btn active" onclick="switchTab('checker')">التصحيح</button>
-      <button id="dictionaryBtn" class="tab-btn" onclick="switchTab('dictionary')">القاموس</button>
+      <button class="tab-btn active" onclick="switchTab('checker')">التصحيح</button>
+      <button class="tab-btn" onclick="switchTab('dictionary')">القاموس</button>
     </div>
 
-    <!-- قسم التصحيح -->
     <div id="checkerSection" class="content-section active">
-      <textarea id="userInput" rows="4" placeholder="اكتب الجملة بالإنجليزية هنا..."></textarea>
+      <textarea id="userInput" rows="4" placeholder="اكتب الجملة هنا..."></textarea>
       <button class="action-btn" onclick="analyzeText()">تحليل وتصحيح</button>
       <div id="checkerResult" class="result-box"></div>
     </div>
 
-    <!-- قسم القاموس -->
     <div id="dictionarySection" class="content-section">
-      <div id="bookWords" style="max-height: 150px; overflow-y: auto; margin-bottom: 15px; border-bottom: 1px solid #475569; padding-bottom: 10px;"></div>
       <input type="text" id="wordInput" placeholder="ابحث عن كلمة...">
       <button class="action-btn" onclick="searchWord()">بحث وترجمة</button>
       <div id="dictionaryResult" class="result-box"></div>
@@ -47,40 +40,49 @@
   </div>
 
   <script>
-    // تبديل التبويبات
     function switchTab(tab) {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
-      document.getElementById(tab + 'Btn').classList.add('active');
-      document.getElementById(tab + 'Section').classList.add('active');
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.innerText.includes(tab === 'checker' ? 'التصحيح' : 'القاموس')));
+      document.querySelectorAll('.content-section').forEach(s => s.classList.toggle('active', s.id === tab + 'Section'));
     }
 
-    // تشغيل الصوت
     function playAudio(text) {
       const u = new SpeechSynthesisUtterance(text);
       u.lang = 'en-US';
       window.speechSynthesis.speak(u);
     }
 
-    // نسخ النصوص
-    function copyToClipboard(text) {
-      navigator.clipboard.writeText(text).then(() => {
-        const toast = document.createElement("div");
-        toast.innerText = "✅ تم نسخ النص";
-        toast.style.cssText = "position:fixed;bottom:20px;right:20px;background:#334155;color:white;padding:8px 12px;border-radius:6px;";
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 2000);
-      });
-    }
-
-    // تحليل النصوص
     async function analyzeText() {
       const input = document.getElementById("userInput").value.trim();
       const box = document.getElementById("checkerResult");
       if (!input) return;
       box.style.display = "block";
-      box.innerHTML = "⏳ جاري التحليل...";
+      box.innerHTML = "⏳ جاري التحقق من المنطق...";
 
+      const lowerInput = input.toLowerCase();
+      let correctedText = input;
+
+      // --- محرك المنطق الذكي (Logic Engine) ---
+      // تصحيح: ماضي + tomorrow (مستقبل)
+      if (lowerInput.includes("tomorrow") && (lowerInput.includes("went") || lowerInput.includes("did"))) {
+          correctedText = input.replace(/went/gi, "will go").replace(/did/gi, "will do");
+      } 
+      // تصحيح: مستقبل + yesterday (ماضي)
+      else if (lowerInput.includes("yesterday") && lowerInput.includes("will")) {
+          correctedText = input.replace(/will go/gi, "went").replace(/will do/gi, "did").replace(/will/gi, "");
+      }
+      // تصحيح: فاعل مفرد + are
+      else if (lowerInput.includes("he are") || lowerInput.includes("she are") || lowerInput.includes("it are")) {
+          correctedText = input.replace(/are/gi, "is");
+      }
+
+      // إذا حدث تصحيح يدوي نعرضه فوراً
+      if (correctedText !== input) {
+          box.innerHTML = `<strong>النص المصحح:</strong><br>${correctedText}<br>
+            <button class="small-btn" onclick="playAudio('${correctedText}')">🔊 استمع</button>`;
+          return;
+      }
+
+      // إذا لم يكن هناك خطأ منطقي، نستخدم API
       try {
         const res = await fetch("https://api.languagetool.org/v2/check", {
           method: "POST",
@@ -88,54 +90,33 @@
           body: new URLSearchParams({ text: input, language: "en-US", level: "picky" })
         });
         const data = await res.json();
-
-        let correctedText = input;
+        
         if (data.matches && data.matches.length > 0) {
           data.matches.sort((a, b) => b.offset - a.offset).forEach(match => {
             if (match.replacements.length > 0) {
               correctedText = correctedText.substring(0, match.offset) + match.replacements[0].value + correctedText.substring(match.offset + match.length);
             }
           });
-          box.innerHTML = `<strong>النص المصحح:</strong><br>${correctedText}
-            <div class="btn-group">
-              <button class="small-btn" onclick="playAudio('${correctedText}')">🔊 استمع</button>
-              <button class="small-btn" onclick="copyToClipboard('${correctedText}')">📋 نسخ</button>
-            </div>`;
+          box.innerHTML = `<strong>النص المصحح:</strong><br>${correctedText}<br><button class="small-btn" onclick="playAudio('${correctedText}')">🔊 استمع</button>`;
         } else {
-          box.innerHTML = "✨ النص صحيح تماماً.";
+          box.innerHTML = "✨ النص سليم منطقياً وقواعدياً.";
         }
-      } catch(e) { box.innerHTML = "⚠️ خطأ في الاتصال بالخادم."; }
+      } catch(e) { box.innerHTML = "⚠️ خطأ في الاتصال."; }
     }
 
-    // البحث في القاموس
     async function searchWord(w = null) {
       const word = w || document.getElementById("wordInput").value.trim();
       const box = document.getElementById("dictionaryResult");
       if (!word) return;
-      box.style.display = "block";
       box.innerHTML = "⏳ جاري البحث...";
       try {
-        const [ar, en] = await Promise.all([
-          fetch(`https://api.mymemory.translated.net/get?q=${word}&langpair=en|ar`).then(r => r.json()),
-          fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`).then(r => r.ok ? r.json() : null)
-        ]);
-        
-        let def = "لا يوجد تعريف إضافي.";
-        let pos = "";
-        if (en) {
-          pos = `(${en[0].meanings[0].partOfSpeech})`;
-          def = en[0].meanings[0].definitions[0].definition;
-        }
-
-        box.innerHTML = `<strong>${word}</strong> ${pos}<br>
-                         <span style="color:#fbbf24;">AR:</span> ${ar.responseData.translatedText}<br>
-                         <span style="color:#94a3b8;">EN:</span> ${def}
-                         <div class="btn-group">
-                           <button class="small-btn" onclick="playAudio('${word}')">🔊 استمع</button>
-                           <button class="small-btn" onclick="copyToClipboard('${word}: ${ar.responseData.translatedText}')">📋 نسخ</button>
-                         </div>`;
+        const res = await fetch(`https://api.mymemory.translated.net/get?q=${word}&langpair=en|ar`);
+        const data = await res.json();
+        box.style.display = "block";
+        box.innerHTML = `<strong>${word}</strong><br>العربية: ${data.responseData.translatedText}<br>
+                         <button class="small-btn" onclick="playAudio('${word}')">🔊 استمع</button>`;
       } catch(e) { box.innerHTML = "⚠️ لم يتم العثور على الكلمة."; }
     }
-
-    // قائمة الكلمات الجاهزة
-    const words = ["Abandon","Achieve","Ambiguous","
+  </script>
+</body>
+</html>
