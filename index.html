@@ -14,7 +14,7 @@
         .content-section.active { display: block; }
         textarea, input { width: 100%; background: #121620; color: white; border: 1px solid #3f4451; padding: 10px; border-radius: 8px; box-sizing: border-box; }
         button.action-btn { background: #5850ec; color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; cursor: pointer; margin-top: 10px; }
-        .result-box { margin-top: 20px; padding: 15px; border-radius: 8px; background: #0f172a; display: none; }
+        .result-box { margin-top: 20px; padding: 15px; border-radius: 8px; background: #0f172a; display: none; border-left: 5px solid #5850ec; }
         .word-chip { display: inline-block; background: #334155; padding: 5px 10px; margin: 3px; border-radius: 15px; cursor: pointer; font-size: 14px; }
         .word-chip:hover { background: #5850ec; }
     </style>
@@ -23,29 +23,30 @@
 
     <div class="container">
         <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('checker')">التصحيح</button>
-            <button class="tab-btn" onclick="switchTab('dictionary')">القاموس</button>
+            <button class="tab-btn active" id="btnChecker" onclick="switchTab('checker')">التصحيح</button>
+            <button class="tab-btn" id="btnDict" onclick="switchTab('dictionary')">القاموس</button>
         </div>
 
         <div id="checkerSection" class="content-section active">
-            <textarea id="userInput" rows="4" placeholder="اكتب جملة بالإنجليزية هنا..."></textarea>
+            <textarea id="userInput" rows="4" placeholder="Type here (e.g., he are good)..."></textarea>
             <button class="action-btn" onclick="analyzeText()">Analyze & Correct</button>
             <div id="checkerResult" class="result-box"></div>
         </div>
 
         <div id="dictionarySection" class="content-section">
-            <div id="bookWords" style="max-height: 250px; overflow-y: auto; margin-bottom: 10px; border: 1px solid #3f4451; padding: 10px;"></div>
-            <input type="text" id="wordInput" placeholder="ابحث عن كلمة...">
-            <button class="action-btn" onclick="searchWord()">Search</button>
+            <div id="bookWords" style="max-height: 200px; overflow-y: auto; margin-bottom: 10px; border: 1px solid #3f4451; padding: 10px;"></div>
+            <input type="text" id="wordInput" placeholder="Search word...">
+            <button class="action-btn" onclick="searchWord()">Search & Translate</button>
             <div id="dictionaryResult" class="result-box"></div>
         </div>
     </div>
 
     <script>
         function switchTab(t) {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.innerText.includes(t === 'checker' ? 'التصحيح' : 'القاموس')));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.content-section').forEach(s => s.style.display = 'none');
-            document.getElementById(t + 'Section').style.display = 'block';
+            if(t === 'checker') { document.getElementById('btnChecker').classList.add('active'); document.getElementById('checkerSection').style.display = 'block'; }
+            else { document.getElementById('btnDict').classList.add('active'); document.getElementById('dictionarySection').style.display = 'block'; }
         }
 
         function playAudio(text) {
@@ -59,18 +60,10 @@
             const box = document.getElementById("checkerResult");
             if (!input) return;
             box.style.display = "block";
-            box.innerHTML = "جاري التحليل...";
+            box.innerHTML = "Analyzing...";
 
-            // منطق "محقق الأزمنة" الخاص بنا
-            const lower = input.toLowerCase();
-            if ((lower.includes("went") || lower.includes("did")) && lower.includes("tomorrow")) {
-                const corr = input.replace(/went/gi, "will go").replace(/did/gi, "will");
-                box.innerHTML = `<strong>Correction:</strong> ${corr} <button onclick="playAudio('${corr}')">🔊</button>`;
-                return;
-            }
-
-            // فحص السيرفر
             try {
+                // 1. فحص الأخطاء عبر السيرفر
                 const res = await fetch("https://api.languagetool.org/v2/check", {
                     method: "POST",
                     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -78,11 +71,18 @@
                 });
                 const data = await res.json();
                 
+                let correctedText = input;
                 if (data.matches && data.matches.length > 0) {
-                    const corr = data.matches[0].replacements[0]?.value || "Grammar issue found";
-                    box.innerHTML = `<strong>Correction:</strong> ${corr} <button onclick="playAudio('${corr}')">🔊</button>`;
+                    // تطبيق كل التصحيحات (من النهاية للبداية للحفاظ على ترتيب النصوص)
+                    data.matches.sort((a, b) => b.offset - a.offset).forEach(match => {
+                        if (match.replacements.length > 0) {
+                            const replacement = match.replacements[0].value;
+                            correctedText = correctedText.substring(0, match.offset) + replacement + correctedText.substring(match.offset + match.length);
+                        }
+                    });
+                    box.innerHTML = `<strong>Correction:</strong> ${correctedText} <button onclick="playAudio('${correctedText}')">🔊 Listen</button>`;
                 } else {
-                    box.innerHTML = "✨ Perfect! No grammar mistakes found.";
+                    box.innerHTML = "✨ Perfect! No grammar mistakes.";
                 }
             } catch(e) { box.innerHTML = "Connection Error!"; }
         }
@@ -98,14 +98,14 @@
                     fetch(`https://api.mymemory.translated.net/get?q=${word}&langpair=en|ar`).then(r => r.json()),
                     fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`).then(r => r.ok ? r.json() : null)
                 ]);
+                const def = (en && en[0].meanings[0].definitions[0]) ? en[0].meanings[0].definitions[0].definition : "No definition found.";
                 box.innerHTML = `<strong>${word}</strong> <button onclick="playAudio('${word}')">🔊</button><br>
                                  <strong>AR:</strong> ${ar.responseData.translatedText}<br>
-                                 <strong>EN:</strong> ${en ? en[0].meanings[0].definitions[0].definition : "No definition."}`;
+                                 <strong>EN:</strong> ${def}`;
             } catch(e) { box.innerHTML = "Word not found."; }
         }
 
-        // قاموس موسع
-        const words = ["Achieve", "Ambiguous", "Benevolent", "Breathtaking", "Candid", "Crucial", "Diligent", "Eccentric", "Eloquent", "Fascinating", "Flawless", "Genuine", "Gullible", "Hypocritical", "Impeccable", "Inevitable", "Jubilant", "Knowledgeable", "Lucrative", "Mitigate", "Notorious", "Obsolete", "Pragmatic", "Quarantine", "Resilient", "Scrutinize", "Tremendous", "Ubiquitous", "Vulnerable", "Widespread", "Zealous", "Abandon", "Capacity", "Dilemma", "Emerge", "Framework", "Generate", "Hypothesis", "Initiative", "Justify", "Modify", "Navigate", "Objective", "Perceive", "Qualitative", "Rational", "Subsequent", "Threshold", "Ultimate", "Validate"];
+        const words = ["Abandon", "Achieve", "Ambiguous", "Benevolent", "Capacity", "Challenge", "Dilemma", "Diligent", "Emerge", "Eloquent", "Framework", "Fascinating", "Generate", "Genuine", "Hypothesis", "Impeccable", "Initiative", "Inevitable", "Justify", "Jubilant", "Knowledgeable", "Lucrative", "Modify", "Mitigate", "Navigate", "Notorious", "Objective", "Obsolete", "Perceive", "Pragmatic", "Qualitative", "Quarantine", "Rational", "Resilient", "Subsequent", "Scrutinize", "Threshold", "Tremendous", "Ultimate", "Ubiquitous", "Validate", "Vulnerable", "Widespread", "Zealous"];
         words.sort().forEach(w => {
             const s = document.createElement("span"); s.className = "word-chip"; s.innerText = w;
             s.onclick = () => searchWord(w);
