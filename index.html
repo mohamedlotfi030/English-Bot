@@ -5,16 +5,19 @@
   <title>المساعد اللغوي المتكامل</title>
   <style>
     body { background-color: #0f172a; color: #f1f5f9; font-family: 'Segoe UI', sans-serif; padding: 20px; }
-    .container { max-width: 700px; margin: auto; background-color: #1e293b; padding: 25px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
+    .container { max-width: 800px; margin: auto; background-color: #1e293b; padding: 25px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
     .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
     .tab-btn { flex: 1; background: #334155; border: none; color: #cbd5e1; padding: 12px; cursor: pointer; border-radius: 8px; }
     .tab-btn.active { background: #5850ec; color: white; }
     .content-section { display: none; }
     .content-section.active { display: block; }
-    textarea { width: 100%; background: #0f172a; color: white; border: 1px solid #475569; padding: 12px; border-radius: 8px; box-sizing: border-box; }
+    textarea, input { width: 100%; background: #0f172a; color: white; border: 1px solid #475569; padding: 12px; border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; }
     .action-btn { background: #5850ec; color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; margin-top: 10px; cursor: pointer; font-weight: bold; }
-    .result-box { margin-top: 20px; padding: 15px; background: #0f172a; border-radius: 10px; border-right: 5px solid #5850ec; }
-    .audio-btn { background: #334155; border: none; color: white; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10px; margin: 2px; }
+    .result-box { margin-top: 20px; padding: 15px; background: #0f172a; border-radius: 10px; border-right: 5px solid #5850ec; display:none; }
+    .score-badge { font-size: 20px; font-weight: bold; margin-bottom: 10px; display: block; }
+    .error-highlight { color: #ef4444; text-decoration: line-through; background: rgba(239, 68, 68, 0.2); padding: 2px 4px; border-radius: 4px; }
+    .correct-highlight { color: #22c55e; font-weight: bold; background: rgba(34, 197, 94, 0.1); padding: 2px 4px; border-radius: 4px; }
+    .audio-btn { background: #334155; border: none; color: white; padding: 6px 10px; border-radius: 5px; cursor: pointer; font-size: 11px; margin: 2px; }
     .word-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 5px; margin-top: 10px; }
     .word-chip { background: #334155; padding: 5px; border-radius: 4px; cursor: pointer; font-size: 11px; text-align: center; border: 1px solid #475569; }
   </style>
@@ -24,46 +27,57 @@
 <div class="container">
     <div class="tabs">
       <button class="tab-btn active" id="btnChecker" onclick="switchTab('checker')">التصحيح</button>
-      <button class="tab-btn" id="btnDict" onclick="switchTab('dictionary')">القاموس (100 كلمة)</button>
+      <button class="tab-btn" id="btnDict" onclick="switchTab('dictionary')">القاموس</button>
     </div>
 
     <div id="checkerSection" class="content-section active">
-      <textarea id="userInput" rows="4" placeholder="مثال: we went to school tomorrow"></textarea>
-      <button class="action-btn" onclick="processText()">تحليل وتصحيح</button>
-      <div id="checkerResult" class="result-box" style="display:none;"></div>
+      <textarea id="userInput" rows="4" placeholder="مثال: We went to school tomorrow"></textarea>
+      <button class="action-btn" onclick="processText()">تحليل وتقييم</button>
+      <div id="checkerResult" class="result-box"></div>
     </div>
 
     <div id="dictionarySection" class="content-section">
       <input type="text" id="wordInput" placeholder="بحث...">
       <button class="action-btn" onclick="searchWord()">بحث وتعلم</button>
-      <div id="dictionaryResult" class="result-box" style="display:none;"></div>
+      <div id="dictionaryResult" class="result-box"></div>
       <div id="wordList" class="word-list"></div>
     </div>
 </div>
 
 <script>
-    // --- البيانات ---
-    const words = ["Ambiguous", "Beneficial", "Consistent", "Establish", "Evaluate", "Fundamental", "Generate", "Hypothesis", "Implement", "Objective", "Promote", "Significant", "Sustain", "Theoretical", "Underestimate", "Apparent", "Capacity", "Challenge", "Dilemma", "Diligent", "Emerge", "Eloquent", "Framework", "Fascinating", "Genuine", "Initiative", "Inevitable", "Justify", "Knowledgeable", "Lucrative", "Maintain", "Neutral", "Outcome", "Perspective", "Relevant", "Advocate", "Coherent", "Compromise", "Constitute", "Discrepancy", "Indispensable", "Meticulous", "Pragmatic", "Redundant", "Scrutinize", "Subsequent", "Trivial", "Vulnerable", "Zealous", "Acquire", "Arbitrary", "Assert", "Convey", "Denote", "Deviate", "Emphasize", "Enhance", "Exceed", "Extract", "Fluctuate", "Hypothesize", "Illustrate", "Interpret", "Incorporate", "Jurisdiction", "Kinetic", "Liability", "Manifest", "Negligible", "Overt", "Ephemeral", "Exacerbate", "Immutable", "Inherent", "Juxtapose", "Paradigm", "Quintessential", "Repercussion", "Superfluous", "Ubiquitous", "Unprecedented", "Vicarious", "Widespread", "Yield", "Zenith", "Abstain", "Alleviate", "Ameliorate", "Anomalous", "Apathy", "Audacious", "Benevolent", "Capricious", "Candid", "Complacent", "Conspicuous", "Delineate", "Despot", "Ebullient", "Eclectic"];
-    
-    // إظهار الكلمات
+    // كلمات متقدمة B2/C1/C2 (100 كلمة)
+    const words = [
+      "Ambiguous","Beneficial","Consistent","Establish","Evaluate","Fundamental","Generate","Hypothesis","Implement","Objective","Promote","Significant","Sustain","Theoretical","Underestimate","Apparent","Capacity","Challenge","Dilemma","Diligent","Emerge","Eloquent","Framework","Fascinating","Genuine","Initiative","Inevitable","Justify","Knowledgeable","Lucrative","Maintain","Neutral","Outcome","Perspective","Relevant","Advocate","Coherent","Compromise","Constitute","Discrepancy","Indispensable","Meticulous","Pragmatic","Redundant","Scrutinize","Subsequent","Trivial","Vulnerable","Zealous",
+      "Ephemeral","Exacerbate","Immutable","Inherent","Juxtapose","Paradigm","Quintessential","Repercussion","Superfluous","Ubiquitous","Validate","Resilient","Notorious","Obsolete","Perceive","Qualitative","Threshold","Ultimate","Widespread","Impeccable","Rational","Substantial","Sophisticated","Intricate","Conspicuous","Elaborate","Prolific","Versatile","Astute","Candid","Conducive","Discerning","Erudite","Fortuitous","Idiosyncratic","Magnanimous","Munificent","Sagacious","Tenacious","Unprecedented","Vindicate","Voracious","Whimsical","Zephyr","Altruistic","Belligerent","Capricious","Debilitate","Egregious","Fastidious","Garrulous","Hapless","Irascible","Lethargic","Mollify","Nefarious","Oblivious","Perfunctory","Quixotic","Recalcitrant","Sanguine","Trepidation","Vociferous"
+    ];
+
     const listDiv = document.getElementById('wordList');
     words.forEach(w => {
         const div = document.createElement('div'); div.className = 'word-chip'; div.innerText = w;
         div.onclick = () => searchWord(w); listDiv.appendChild(div);
     });
 
-    // --- منطق التصحيح المطور ---
     async function processText() {
         let input = document.getElementById("userInput").value.trim();
         const box = document.getElementById("checkerResult");
         if (!input) return;
-        
-        // 1. تصحيح منطقي يحافظ على بقية الجملة
+        box.style.display = "block";
+        box.innerHTML = "⏳ جاري التحليل...";
+
+        // قواعد زمنية
         let correctedLogic = input;
+        let logicFixes = 0;
         if (/\bwent\b/i.test(input) && /\btomorrow\b/i.test(input)) {
-            correctedLogic = input.replace(/\bwent\b/i, "will go");
-        } else if (/\bleft\b/i.test(input) && /\btomorrow\b/i.test(input)) {
-            correctedLogic = input.replace(/\bleft\b/i, "will leave");
+            correctedLogic = input.replace(/\bwent\b/i, "will go"); logicFixes++;
+        }
+        if (/\bwill\b/i.test(input) && /\byesterday\b/i.test(input)) {
+            correctedLogic = correctedLogic.replace(/\bwill go\b/i, "went").replace(/\bwill do\b/i, "did").replace(/\bwill\b/i, ""); logicFixes++;
+        }
+        if (/\bgo\b/i.test(input) && /\byesterday\b/i.test(input)) {
+            correctedLogic = correctedLogic.replace(/\bgo\b/i, "went"); logicFixes++;
+        }
+        if (/\bgo\b/i.test(input) && /\btomorrow\b/i.test(input)) {
+            correctedLogic = correctedLogic.replace(/\bgo\b/i, "will go"); logicFixes++;
         }
 
         try {
@@ -72,56 +86,12 @@
                 body: new URLSearchParams({ text: correctedLogic, language: "en-US", level: "picky" })
             });
             const data = await res.json();
-            
+
+            let highlightedOrig = input;
             let finalOutput = correctedLogic;
-            data.matches.forEach(m => {
-                finalOutput = finalOutput.replace(m.context.text.substring(m.offset, m.offset+m.length), m.replacements[0].value);
-            });
+            let matches = data.matches;
 
-            box.style.display = "block";
-            box.innerHTML = `<strong>الجملة المصححة:</strong><br>${finalOutput} ${getAudioMarkup(finalOutput)}`;
-        } catch(e) { box.innerHTML = "حدث خطأ."; }
-    }
-
-    // --- منطق القاموس مع الترجمة ---
-    async function searchWord(w = null) {
-        const word = w || document.getElementById("wordInput").value.trim();
-        if (!word) return;
-        const box = document.getElementById("dictionaryResult");
-        box.style.display = "block";
-        box.innerHTML = "جاري البحث...";
-
-        try {
-            const [arRes, enRes] = await Promise.all([
-                fetch(`https://api.mymemory.translated.net/get?q=${word}&langpair=en|ar`).then(r => r.json()),
-                fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`).then(r => r.json())
-            ]);
-            
-            const trans = arRes.responseData.translatedText;
-            const def = enRes[0].meanings[0].definitions[0].definition;
-            
-            box.innerHTML = `<strong>${word}</strong> ${getAudioMarkup(word)}<br><strong>الترجمة:</strong> ${trans}<br><strong>الشرح:</strong> ${def}`;
-        } catch(e) { box.innerHTML = "لم أجد الكلمة."; }
-    }
-
-    // --- أدوات ---
-    function switchTab(tab) {
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
-        document.getElementById(tab === 'checker' ? 'btnChecker' : 'btnDict').classList.add('active');
-        document.getElementById(tab + 'Section').classList.add('active');
-    }
-
-    function getAudioMarkup(text) {
-        return `<button class="audio-btn" onclick="speak('${text.replace(/'/g, "\\'")}', 'en-US')">US</button>
-                <button class="audio-btn" onclick="speak('${text.replace(/'/g, "\\'")}', 'en-GB')">UK</button>`;
-    }
-
-    function speak(text, locale) {
-        const u = new SpeechSynthesisUtterance(text);
-        u.lang = locale;
-        window.speechSynthesis.speak(u);
-    }
-</script>
-</body>
-</html>
+            matches.sort((a,b) => b.offset - a.offset).forEach(m => {
+                let errorText = correctedLogic.substring(m.offset, m.offset + m.length);
+                highlightedOrig = highlightedOrig.substring(0, m.offset) + `<span class="error-highlight">${errorText}</span>` + highlightedOrig.substring(m.offset + m.length);
+                finalOutput = finalOutput.substring(0, m.offset) + `<span class="correct-highlight">${m.replacements[0].value}</
