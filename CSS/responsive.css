@@ -1,1 +1,246 @@
+/* ==========================================================
+   English-Bot
+   Responsive Design
+========================================================== */
 
+/* ==========================================================
+   Large Screens
+========================================================== */
+
+@media (max-width:1400px){
+
+    .dashboard{
+
+        grid-template-columns:repeat(3,1fr);
+
+    }
+
+}
+
+/* ==========================================================
+   Laptops
+========================================================== */
+
+@media (max-width:1200px){
+
+    .dashboard{
+
+        grid-template-columns:repeat(2,1fr);
+
+    }
+
+    .stats-grid{
+
+        grid-template-columns:repeat(2,1fr);
+
+    }
+
+}
+
+/* ==========================================================
+   Tablets
+========================================================== */
+
+@media (max-width:992px){
+
+    body{
+
+        overflow:auto;
+
+    }
+
+    .sidebar{
+
+        position:fixed;
+
+        left:-280px;
+
+        top:0;
+
+        width:270px;
+
+        height:100vh;
+
+        transition:.35s ease;
+
+        z-index:1000;
+
+    }
+
+    .sidebar.active{
+
+        left:0;
+
+    }
+
+    .main{
+
+        width:100%;
+
+        margin-left:0;
+
+    }
+
+    .header{
+
+        padding:18px;
+
+    }
+
+    #content{
+
+        padding:20px;
+
+    }
+
+    .dashboard{
+
+        grid-template-columns:1fr;
+
+    }
+
+    .stats-grid{
+
+        grid-template-columns:1fr;
+
+    }
+
+    .grid-2,
+    .grid-3,
+    .grid-4{
+
+        grid-template-columns:1fr;
+
+    }
+
+}
+
+/* ==========================================================
+   Mobile
+========================================================== */
+
+@media (max-width:768px){
+
+    .header{
+
+        flex-direction:column;
+
+        justify-content:center;
+
+        align-items:flex-start;
+
+        gap:15px;
+
+    }
+
+    .header-right{
+
+        width:100%;
+
+        justify-content:flex-end;
+
+    }
+
+    .hero{
+
+        padding:25px;
+
+        text-align:center;
+
+    }
+
+    .hero h2{
+
+        font-size:28px;
+
+    }
+
+    .hero p{
+
+        font-size:15px;
+
+    }
+
+    .card{
+
+        padding:20px;
+
+    }
+
+    .flashcard{
+
+        padding:35px 20px;
+
+    }
+
+    .flashcard-word{
+
+        font-size:26px;
+
+        word-break:break-word;
+
+    }
+
+    .quiz-question{
+
+        font-size:20px;
+
+    }
+
+}
+
+/* ==========================================================
+   Small Phones
+========================================================== */
+
+@media (max-width:480px){
+
+    .logo h2{
+
+        font-size:20px;
+
+    }
+
+    .header-left h1{
+
+        font-size:22px;
+
+    }
+
+    .dashboard{
+
+        gap:15px;
+
+    }
+
+    .stats-grid{
+
+        gap:15px;
+
+    }
+
+    .icon-btn{
+
+        width:40px;
+
+        height:40px;
+
+    }
+
+    .btn{
+
+        width:100%;
+
+    }
+
+    #toast{
+
+        right:10px;
+
+        left:10px;
+
+        min-width:auto;
+
+    }
+
+}
