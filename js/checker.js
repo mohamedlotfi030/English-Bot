@@ -142,79 +142,371 @@ async function processText(){
  * before sending text to LanguageTool.
  */
 
+/* ==========================================================
+   Smart Grammar Rules
+========================================================== */
+
 function applyLogicRules(text){
 
     let sentence = text.trim();
 
-    const rules = [
+    // ======================================================
+    // Normalize spaces
+    // ======================================================
 
-        {
-            pattern:/\bwent\b/i,
-            time:/\btomorrow\b/i,
-            replace:"will go"
-        },
+    sentence = sentence.replace(/\s+/g," ");
 
-        {
-            pattern:/\bleft\b/i,
-            time:/\btomorrow\b/i,
-            replace:"will leave"
-        },
+    // ======================================================
+    // Capitalize first letter
+    // ======================================================
 
-        {
-            pattern:/\bcame\b/i,
-            time:/\btomorrow\b/i,
-            replace:"will come"
-        },
+    sentence =
+        sentence.charAt(0).toUpperCase() +
+        sentence.slice(1);
 
-        {
-            pattern:/\bgo\b/i,
-            time:/\byesterday\b/i,
-            replace:"went"
-        },
+    // ======================================================
+    // Pronoun I
+    // ======================================================
 
-        {
-            pattern:/\bcome\b/i,
-            time:/\byesterday\b/i,
-            replace:"came"
-        },
+    sentence = sentence.replace(/\bi\b/g,"I");
 
-        {
-            pattern:/\bleave\b/i,
-            time:/\byesterday\b/i,
-            replace:"left"
-        }
+    // ======================================================
+    // Yesterday + Future
+    // ======================================================
 
-    ];
+    sentence = sentence.replace(
 
-    for(const rule of rules){
+        /\bwill\s+go\b(?=.*\byesterday\b)/i,
 
-        if(
+        "went"
 
-            rule.pattern.test(sentence) &&
+    );
 
-            rule.time.test(sentence)
+    sentence = sentence.replace(
 
-        ){
+        /\bwill\s+come\b(?=.*\byesterday\b)/i,
 
-            sentence = sentence.replace(
+        "came"
 
-                rule.pattern,
+    );
 
-                rule.replace
+    sentence = sentence.replace(
 
-            );
+        /\bwill\s+leave\b(?=.*\byesterday\b)/i,
 
-        }
+        "left"
+
+    );
+
+    // ======================================================
+    // Tomorrow + Past
+    // ======================================================
+
+    sentence = sentence.replace(
+
+        /\bwent\b(?=.*\btomorrow\b)/i,
+
+        "will go"
+
+    );
+
+    sentence = sentence.replace(
+
+        /\bcame\b(?=.*\btomorrow\b)/i,
+
+        "will come"
+
+    );
+
+    sentence = sentence.replace(
+
+        /\bleft\b(?=.*\btomorrow\b)/i,
+
+        "will leave"
+
+    );
+
+    // ======================================================
+    // Present Perfect
+    // ======================================================
+
+    sentence = sentence.replace(
+
+        /\bhave\s+went\b/gi,
+
+        "have gone"
+
+    );
+
+    sentence = sentence.replace(
+
+        /\bhas\s+went\b/gi,
+
+        "has gone"
+
+    );
+
+    sentence = sentence.replace(
+
+        /\bhave\s+ate\b/gi,
+
+        "have eaten"
+
+    );
+
+    sentence = sentence.replace(
+
+        /\bhas\s+ate\b/gi,
+
+        "has eaten"
+
+    );
+
+    // ======================================================
+    // Did + Past
+    // ======================================================
+
+    sentence = sentence.replace(
+
+        /\bdid\s+went\b/gi,
+
+        "did go"
+
+    );
+
+    sentence = sentence.replace(
+
+        /\bdid\s+came\b/gi,
+
+        "did come"
+
+    );
+
+    sentence = sentence.replace(
+
+        /\bdid\s+ate\b/gi,
+
+        "did eat"
+
+    );
+
+    // ======================================================
+    // Does + Verb
+    // ======================================================
+
+    sentence = sentence.replace(
+
+        /\bdoes\s+goes\b/gi,
+
+        "does go"
+
+    );
+
+    sentence = sentence.replace(
+
+        /\bdoes\s+likes\b/gi,
+
+        "does like"
+
+    );
+
+    sentence = sentence.replace(
+
+        /\bdoes\s+plays\b/gi,
+
+        "does play"
+
+    );
+
+    // ======================================================
+    // Don't / Doesn't
+    // ======================================================
+
+    sentence = sentence.replace(
+
+        /\bhe\s+don't\b/gi,
+
+        "He doesn't"
+
+    );
+
+    sentence = sentence.replace(
+
+        /\bshe\s+don't\b/gi,
+
+        "She doesn't"
+
+    );
+
+    sentence = sentence.replace(
+
+        /\bit\s+don't\b/gi,
+
+        "It doesn't"
+
+    );
+
+    // ======================================================
+    // Third Person
+    // ======================================================
+
+    sentence = sentence.replace(
+
+        /\bhe\s+go\b/gi,
+
+        "He goes"
+
+    );
+
+    sentence = sentence.replace(
+
+        /\bshe\s+go\b/gi,
+
+        "She goes"
+
+    );
+
+    sentence = sentence.replace(
+
+        /\bhe\s+have\b/gi,
+
+        "He has"
+
+    );
+
+    sentence = sentence.replace(
+
+        /\bshe\s+have\b/gi,
+
+        "She has"
+
+    );
+
+    // ======================================================
+    // Missing Articles
+    // ======================================================
+
+    sentence = sentence.replace(
+
+        /\bI am doctor\b/i,
+
+        "I am a doctor"
+
+    );
+
+    sentence = sentence.replace(
+
+        /\bI am teacher\b/i,
+
+        "I am a teacher"
+
+    );
+
+    sentence = sentence.replace(
+
+        /\bI am engineer\b/i,
+
+        "I am an engineer"
+
+    );
+
+    sentence = sentence.replace(
+
+        /\bHe is doctor\b/i,
+
+        "He is a doctor"
+
+    );
+
+    sentence = sentence.replace(
+
+        /\bShe is doctor\b/i,
+
+        "She is a doctor"
+
+    );
+
+    // ======================================================
+    // Irregular Plurals
+    // ======================================================
+
+    sentence = sentence.replace(
+
+        /\bchilds\b/gi,
+
+        "children"
+
+    );
+
+    sentence = sentence.replace(
+
+        /\bpeoples\b/gi,
+
+        "people"
+
+    );
+
+    sentence = sentence.replace(
+
+        /\binformations\b/gi,
+
+        "information"
+
+    );
+
+    sentence = sentence.replace(
+
+        /\badvices\b/gi,
+
+        "advice"
+
+    );
+
+    // ======================================================
+    // Common Prepositions
+    // ======================================================
+
+    sentence = sentence.replace(
+
+        /\bmarried with\b/gi,
+
+        "married to"
+
+    );
+
+    sentence = sentence.replace(
+
+        /\binterested on\b/gi,
+
+        "interested in"
+
+    );
+
+    sentence = sentence.replace(
+
+        /\bgood in\b/gi,
+
+        "good at"
+
+    );
+
+    sentence = sentence.replace(
+
+        /\bdepend of\b/gi,
+
+        "depend on"
+
+    );
+
+    // ======================================================
+    // Punctuation
+    // ======================================================
+
+    if(!/[.!?]$/.test(sentence)){
+
+        sentence += ".";
 
     }
-
-    sentence = sentence
-
-        .replace(/\s+/g, " ")
-
-        .replace(/\s+([.,!?])/g, "$1")
-
-        .trim();
 
     return sentence;
 
