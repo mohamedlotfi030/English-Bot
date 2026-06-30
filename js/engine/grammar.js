@@ -3,14 +3,15 @@
 /* ==========================================================
    English-Bot
    Grammar Framework
-   Version 5.1
+   Version 6.0
+   (Core Definitions Only)
 ========================================================== */
 
 /* ==========================================================
    Grammar Categories
 ========================================================== */
 
-const GrammarCategory = {
+const GrammarCategory = Object.freeze({
     GRAMMAR: "grammar",
     TENSE: "tense",
     AGREEMENT: "agreement",
@@ -36,72 +37,91 @@ const GrammarCategory = {
     COLLOCATION: "collocation",
     IDIOM: "idiom",
     NATURAL_ENGLISH: "naturalEnglish"
-};
+});
 
 /* ==========================================================
    Grammar Severity
 ========================================================== */
 
-const GrammarSeverity = {
+const GrammarSeverity = Object.freeze({
     INFO: "info",
     WARNING: "warning",
     ERROR: "error",
     CRITICAL: "critical"
-};
+});
 
 /* ==========================================================
-   Grammar Rule Base
+   Grammar Rule
 ========================================================== */
 
 class GrammarRule {
-    constructor({
-        id,
-        name,
-        category,
-        description = "",
-        priority = 100,
-        severity = GrammarSeverity.ERROR,
-        enabled = true,
-        test,
-        fix
-    }) {
-        this.id = id;
-        this.name = name;
-        this.category = category;
-        this.description = description;
-        this.priority = priority;
-        this.severity = severity;
-        this.enabled = enabled;
-        this.test = test;
-        this.fix = fix;
+
+    constructor(options = {}) {
+
+        this.id = options.id || "";
+
+        this.name = options.name || "";
+
+        this.category = options.category || GrammarCategory.GRAMMAR;
+
+        this.description = options.description || "";
+
+        this.priority = Number.isFinite(options.priority)
+            ? options.priority
+            : 100;
+
+        this.severity = options.severity || GrammarSeverity.ERROR;
+
+        this.enabled = options.enabled !== false;
+
+        this.test =
+            typeof options.test === "function"
+                ? options.test
+                : () => false;
+
+        this.fix =
+            typeof options.fix === "function"
+                ? options.fix
+                : (sentence) => ({
+                      text: sentence,
+                      issue: false
+                  });
     }
+
 }
 
 /* ==========================================================
-   Grammar Correction Object
+   Grammar Correction
 ========================================================== */
 
 class GrammarCorrection {
-    constructor({
-        issue,
-        reason,
-        explanation,
-        correction,
-        suggestions = []
-    }) {
-        this.issue = issue;
-        this.reason = reason;
-        this.explanation = explanation;
-        this.correction = correction;
-        this.suggestions = suggestions;
+
+    constructor(options = {}) {
+
+        this.issue = options.issue || "";
+
+        this.reason = options.reason || "";
+
+        this.explanation = options.explanation || "";
+
+        this.correction = options.correction || "";
+
+        this.suggestions = Array.isArray(options.suggestions)
+            ? options.suggestions
+            : [];
+
     }
+
 }
 
 /* ==========================================================
-   Export
+   Exports
 ========================================================== */
 
 window.GrammarCategory = GrammarCategory;
+
 window.GrammarSeverity = GrammarSeverity;
+
 window.GrammarRule = GrammarRule;
+
 window.GrammarCorrection = GrammarCorrection;
