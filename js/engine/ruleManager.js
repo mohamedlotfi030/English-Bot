@@ -3,22 +3,27 @@
 /* ==========================================================
    English-Bot
    Rule Manager
-   Version 6.2 (Engine Compatible)
+   Version 7.0
 ========================================================== */
 
 class RuleManager {
 
     constructor() {
+
         this.rules = [];
+
         this.categories = new Map();
+
     }
 
     /* ======================================================
-       Register (Required by GrammarEngine)
+       Register
     ====================================================== */
 
     register(rule) {
-        this.add(rule);
+
+        return this.add(rule);
+
     }
 
     /* ======================================================
@@ -28,42 +33,37 @@ class RuleManager {
     add(rule) {
 
         if (!(rule instanceof GrammarRule)) {
+
             console.error("[RuleManager] Invalid Grammar Rule:", rule);
-            return;
+
+            return false;
+
+        }
+
+        if (this.rules.some(r => r.id === rule.id)) {
+
+            console.warn(`[RuleManager] Duplicate rule skipped: ${rule.id}`);
+
+            return false;
+
         }
 
         this.rules.push(rule);
+
         this.sort();
+
+        return true;
+
     }
 
     /* ======================================================
-       Get All Rules
+       Get Rules
     ====================================================== */
 
     getRules() {
+
         return this.rules;
-    }
 
-    /* ======================================================
-       Remove Rule
-    ====================================================== */
-
-    remove(id) {
-        this.rules = this.rules.filter(rule => rule.id !== id);
-    }
-
-    /* ======================================================
-       Enable / Disable
-    ====================================================== */
-
-    enable(id) {
-        const rule = this.get(id);
-        if (rule) rule.enabled = true;
-    }
-
-    disable(id) {
-        const rule = this.get(id);
-        if (rule) rule.enabled = false;
     }
 
     /* ======================================================
@@ -71,22 +71,89 @@ class RuleManager {
     ====================================================== */
 
     get(id) {
+
         return this.rules.find(rule => rule.id === id);
+
     }
 
     /* ======================================================
-       Categories
+       Remove Rule
+    ====================================================== */
+
+    remove(id) {
+
+        this.rules = this.rules.filter(rule => rule.id !== id);
+
+    }
+
+    /* ======================================================
+       Clear
+    ====================================================== */
+
+    clear() {
+
+        this.rules = [];
+
+        this.categories.clear();
+
+    }
+
+    /* ======================================================
+       Enable Rule
+    ====================================================== */
+
+    enable(id) {
+
+        const rule = this.get(id);
+
+        if (rule) {
+
+            rule.enabled = true;
+
+        }
+
+    }
+
+    /* ======================================================
+       Disable Rule
+    ====================================================== */
+
+    disable(id) {
+
+        const rule = this.get(id);
+
+        if (rule) {
+
+            rule.enabled = false;
+
+        }
+
+    }
+
+    /* ======================================================
+       Register Category
     ====================================================== */
 
     registerCategory(name) {
+
         if (!this.categories.has(name)) {
+
             this.categories.set(name, []);
+
         }
+
     }
 
+    /* ======================================================
+       Add To Category
+    ====================================================== */
+
     addToCategory(category, rule) {
+
         this.registerCategory(category);
+
         this.categories.get(category).push(rule);
+
     }
 
     /* ======================================================
@@ -94,7 +161,9 @@ class RuleManager {
     ====================================================== */
 
     sort() {
+
         this.rules.sort((a, b) => a.priority - b.priority);
+
     }
 
     /* ======================================================
@@ -111,14 +180,26 @@ class RuleManager {
 
         for (const rule of this.rules) {
 
-            if (!rule.enabled) continue;
+            if (!rule.enabled) {
 
-            if (rule.test(output, analysis, tokens)) {
+                continue;
+
+            }
+
+            try {
+
+                if (!rule.test(output, analysis, tokens)) {
+
+                    continue;
+
+                }
 
                 const result = rule.fix(output, analysis, tokens);
 
                 if (result?.text) {
+
                     output = result.text;
+
                 }
 
                 if (result?.issue) {
@@ -155,11 +236,14 @@ class RuleManager {
 
                 }
 
+            } catch (err) {
+
+                console.error(`[Rule Error] ${rule.id}`, err);
+
             }
 
         }
-
-        return {
+               return {
 
             text: output,
 
@@ -176,7 +260,7 @@ class RuleManager {
     }
 
     /* ======================================================
-       Report
+       Generate Report
     ====================================================== */
 
     generateReport(issues) {
@@ -185,11 +269,29 @@ class RuleManager {
 
         for (const issue of issues) {
 
-            report[issue.category] = (report[issue.category] || 0) + 1;
+            report[issue.category] =
+
+                (report[issue.category] || 0) + 1;
 
         }
 
         return report;
+
+    }
+
+    /* ======================================================
+       Statistics
+    ====================================================== */
+
+    statistics() {
+
+        return {
+
+            rules: this.rules.length,
+
+            categories: this.categories.size
+
+        };
 
     }
 
@@ -199,23 +301,36 @@ class RuleManager {
 
     evaluateWriting(text, issues) {
 
-        const grammar =
-            Math.max(100 - issues.length * 10, 0);
+        const grammar = Math.max(
 
-        const vocabulary =
-            Math.min(
-                100,
-                60 + text.split(/\s+/).length * 2
-            );
+            100 - issues.length * 10,
+
+            0
+
+        );
+
+        const vocabulary = Math.min(
+
+            100,
+
+            60 + text.split(/\s+/).length * 2
+
+        );
 
         const naturalness =
+
             /[.!?]/.test(text)
+
                 ? 95
+
                 : 85;
 
         const style =
+
             /\b(therefore|however|moreover|consequently)\b/i.test(text)
+
                 ? 95
+
                 : 75;
 
         const overall = Math.round(
@@ -282,71 +397,111 @@ if (window.GrammarEngine) {
 
 window.registerRules = function (category, rulesArray) {
 
-    if (!Array.isArray(rulesArray)) return;
+    if (!Array.isArray(rulesArray)) {
+
+        return;
+
+    }
 
     rulesArray.forEach(r => {
 
-        const grammarRule = new GrammarRule({
+        const grammarRule =
 
-            id:
-                r.id ||
-                `${category}_${Math.random().toString(36).slice(2, 10)}`,
+            r instanceof GrammarRule
 
-            name:
-                r.name ||
-                r.description,
+                ? r
 
-            category,
+                : new GrammarRule({
 
-            description:
-                r.description,
+                    id:
 
-            priority:
-                r.priority || 100,
+                        r.id ||
 
-            severity:
-                r.severity || GrammarSeverity.ERROR,
+                        `${category}_${Math.random().toString(36).slice(2, 10)}`,
 
-            enabled: true,
+                    name:
 
-            test:
-                r.test || r.condition,
+                        r.name ||
 
-            fix:
-                r.fix ||
-                ((sentence, analysis) => {
+                        r.description,
 
-                    return {
+                    category:
 
-                        text:
-                            r.correction(sentence, analysis),
+                        r.category ||
 
-                        issue: true,
+                        category,
 
-                        reason:
-                            r.description,
+                    description:
 
-                        explanation:
-                            "",
+                        r.description || "",
 
-                        correction:
-                            r.correction(sentence, analysis)
+                    priority:
 
-                    };
+                        r.priority || 100,
 
-                })
+                    severity:
 
-        });
+                        r.severity ||
 
-        ruleManager.add(grammarRule);
+                        GrammarSeverity.ERROR,
 
-        ruleManager.addToCategory(
+                    enabled:
 
-            category,
+                        r.enabled !== false,
 
-            grammarRule
+                    test:
 
-        );
+                        r.test ||
+
+                        r.condition ||
+
+                        (() => false),
+
+                    fix:
+
+                        r.fix ||
+
+                        ((sentence, analysis, tokens) => ({
+
+                            text:
+
+                                typeof r.correction === "function"
+
+                                    ? r.correction(sentence, analysis, tokens)
+
+                                    : sentence,
+
+                            issue: true,
+
+                            reason:
+
+                                r.description || "",
+
+                            explanation: "",
+
+                            correction:
+
+                                typeof r.correction === "function"
+
+                                    ? r.correction(sentence, analysis, tokens)
+
+                                    : sentence
+
+                        }))
+
+                });
+
+        if (ruleManager.add(grammarRule)) {
+
+            ruleManager.addToCategory(
+
+                grammarRule.category,
+
+                grammarRule
+
+            );
+
+        }
 
     });
 
