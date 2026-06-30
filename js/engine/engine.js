@@ -4,7 +4,7 @@
    English-Bot
    Grammar Engine
    engine.js
-   Version 5.1 (Architecture Fixed & Stabilized)
+   Version 5.2 (Fully Fixed Integration)
 ========================================================== */
 
 const GrammarEngine = (() => {
@@ -49,29 +49,64 @@ const GrammarEngine = (() => {
     }
 
     /* ======================================================
-       Register Rules (✅ Fixes Error #6)
+       Register Rule (FIXED)
     ====================================================== */
     function registerRule(rule) {
-        if (managers.ruleManager) {
-            managers.ruleManager.register(rule);
-            statistics.loadedRules = managers.ruleManager.getRules ? managers.ruleManager.getRules().length : statistics.loadedRules + 1;
-        } else {
-            console.warn(`[GrammarEngine] RuleManager not loaded yet. Cannot register rule: ${rule.id}`);
+
+        if (!rule) return;
+
+        const manager = managers.ruleManager;
+
+        if (!manager) {
+            console.warn("[GrammarEngine] RuleManager not ready");
+            return;
+        }
+
+        try {
+
+            const grammarRule = (rule instanceof GrammarRule)
+                ? rule
+                : new GrammarRule({
+                    id: rule.id || rule.name,
+                    name: rule.name || rule.description,
+                    category: rule.category || "grammar",
+                    description: rule.description || "",
+                    priority: rule.priority || 100,
+                    severity: rule.severity || GrammarSeverity.ERROR,
+                    enabled: true,
+                    test: rule.test || rule.condition,
+                    fix: rule.fix || ((s, a) => ({
+                        text: rule.correction ? rule.correction(s, a) : s,
+                        issue: true
+                    }))
+                });
+
+            manager.register(grammarRule);
+            statistics.loadedRules++;
+
+        } catch (err) {
+            console.error("[GrammarEngine registerRule Error]", err);
         }
     }
 
+    /* ======================================================
+       Register Rules (FIXED)
+    ====================================================== */
     function registerRules(rulesArray) {
-        if (Array.isArray(rulesArray)) {
-            rulesArray.forEach(rule => registerRule(rule));
-        } else {
-            console.error("[GrammarEngine] registerRules expects an Array.");
+
+        if (!Array.isArray(rulesArray)) {
+            console.error("[GrammarEngine] registerRules expects Array");
+            return;
         }
+
+        rulesArray.forEach(registerRule);
     }
 
     /* ======================================================
        Initialize
     ====================================================== */
     function initialize() {
+
         if (initialized) return;
 
         if (!managers.ruleManager) throw new Error("RuleManager not loaded.");
@@ -87,54 +122,61 @@ const GrammarEngine = (() => {
        Analyze
     ====================================================== */
     function analyze(text) {
+
         const tokens = managers.tokenizer.tokenize(text);
         return managers.analyzer.analyze(tokens);
     }
 
     /* ======================================================
-       Correct (✅ Crash Prevention Added)
+       Correct
     ====================================================== */
     function correct(text) {
+
         if (!text || text.trim() === "") {
-            return { text: "", issues: [], suggestions: [], report: {}, evaluation: {}, helper: {} };
+            return {
+                text: "",
+                issues: [],
+                suggestions: [],
+                report: {},
+                evaluation: {},
+                helper: {}
+            };
         }
 
         try {
+
             if (!initialized) initialize();
 
             statistics.analyzedSentences++;
-            
-            // 1. Tokenization & Analysis
+
             const tokens = managers.tokenizer.tokenize(text);
             const analysis = managers.analyzer.analyze(tokens);
 
-            // 2. RuleManager Execution
             const result = managers.ruleManager.execute(text, analysis, tokens);
 
-            // 3. Corrector Helper
-            const correctedByHelper = managers.corrector.correct(text, analysis, tokens);
+            const helper = managers.corrector.correct(text, analysis, tokens);
 
             statistics.corrections++;
 
-            // 4. Merge Results
             return {
-                text: result.text || correctedByHelper.text || text,
+                text: result.text || helper.text || text,
                 issues: result.issues || [],
                 suggestions: result.suggestions || [],
                 report: result.report || {},
-                evaluation: result.evaluation || {}, 
-                helper: correctedByHelper 
+                evaluation: result.evaluation || {},
+                helper
             };
 
         } catch (error) {
-            console.error("[GrammarEngine Critical Error]", error.message);
-            // إرجاع كائن آمن لمنع انهيار واجهة المستخدم بالكامل
+
+            console.error("[GrammarEngine ERROR]", error);
+
             return {
-                text: text,
+                text,
                 issues: [],
                 suggestions: [],
                 error: true,
-                message: `Unable to process grammar rules: ${error.message}`,
+                message: error.message,
                 evaluation: {},
                 helper: {}
             };
@@ -145,10 +187,14 @@ const GrammarEngine = (() => {
        Statistics
     ====================================================== */
     function getStatistics() {
-        // تحديث عدد القواعد فعلياً من الـ RuleManager إن أمكن
-        if (managers.ruleManager && typeof managers.ruleManager.getRules === 'function') {
+
+        if (
+            managers.ruleManager &&
+            typeof managers.ruleManager.getRules === "function"
+        ) {
             statistics.loadedRules = managers.ruleManager.getRules().length;
         }
+
         return { ...statistics };
     }
 
@@ -162,8 +208,8 @@ const GrammarEngine = (() => {
         registerManager,
         registerDictionary,
         getDictionary,
-        registerRule,   // ✅ تمت الإضافة للـ API
-        registerRules,  // ✅ تمت الإضافة للـ API
+        registerRule,
+        registerRules,
         getStatistics
     };
 
