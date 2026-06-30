@@ -1,223 +1,112 @@
-```javascript
 "use strict";
 
 /* ==========================================================
    English-Bot
    Tokenizer
-   Version 4.0
+   Version 4.1 (Architecture Fixed)
 ========================================================== */
 
 class Tokenizer {
 
     constructor() {
-
-        this.wordPattern = /[A-Za-z]+(?:'[A-Za-z]+)?/g;
-
-        this.punctuationPattern = /[.,!?;:()"]/g;
-
+        // تم تحسين التعبير القياسي ليدعم الكلمات المركبة بشرطة (Hyphenated words)
+        // مثل: "state-of-the-art" أو "up-to-date"
+        this.wordPattern = /[A-Za-z]+(?:[-'][A-Za-z]+)*|[0-9]+|[.,!?;:()"]/g;
     }
 
     /* ======================================================
        Tokenize
     ====================================================== */
-
     tokenize(text) {
-
         if (!text || typeof text !== "string") {
-
             return [];
-
         }
 
         const tokens = [];
-
-        const parts = text.match(/[A-Za-z]+(?:'[A-Za-z]+)?|[0-9]+|[.,!?;:()"]/g);
+        const parts = text.match(this.wordPattern);
 
         if (!parts) {
-
             return [];
-
         }
 
         let index = 0;
-
         for (const part of parts) {
-
-            tokens.push(
-
-                this.createToken(
-
-                    part,
-
-                    index++
-
-                )
-
-            );
-
+            tokens.push(this.createToken(part, index++));
         }
 
         return tokens;
-
     }
 
     /* ======================================================
        Create Token
     ====================================================== */
-
     createToken(word, position) {
-
         return {
-
             value: word,
-
             lower: word.toLowerCase(),
-
             position,
-
             type: this.detectType(word),
-
             length: word.length,
-
             isWord: /^[A-Za-z]/.test(word),
-
             isNumber: /^[0-9]+$/.test(word),
-
             isPunctuation: /^[.,!?;:()"]$/.test(word)
-
         };
-
     }
 
     /* ======================================================
        Detect Token Type
     ====================================================== */
-
     detectType(word) {
-
         const lower = word.toLowerCase();
 
-        if (/^[0-9]+$/.test(word)) {
+        if (/^[0-9]+$/.test(word)) return "number";
+        if (/^[.,!?;:()"]$/.test(word)) return "punctuation";
 
-            return "number";
+        // دالة مساعدة لضمان عدم حدوث خطأ إذا كان القاموس Array وليس Set
+        const inDictionary = (category) => {
+            if (!window.GrammarEngine) return false;
+            const dict = window.GrammarEngine.getDictionary(category);
+            if (!dict) return false;
+            return typeof dict.has === 'function' ? dict.has(lower) : dict.includes(lower);
+        };
 
-        }
+        if (inDictionary("verbs")) return "verb";
+        if (inDictionary("nouns")) return "noun";
+        if (inDictionary("adjectives")) return "adjective";
+        if (inDictionary("adverbs")) return "adverb";
+        if (inDictionary("articles")) return "article";
+        if (inDictionary("pronouns")) return "pronoun";
+        if (inDictionary("prepositions")) return "preposition";
 
-        if (/^[.,!?;:()"]$/.test(word)) {
-
-            return "punctuation";
-
-        }
-
-        const verbs = GrammarEngine.getDictionary("verbs");
-
-        if (verbs && verbs.has(lower)) {
-
-            return "verb";
-
-        }
-
-        const nouns = GrammarEngine.getDictionary("nouns");
-
-        if (nouns && nouns.has(lower)) {
-
-            return "noun";
-
-        }
-
-        const adjectives = GrammarEngine.getDictionary("adjectives");
-
-        if (adjectives && adjectives.has(lower)) {
-
-            return "adjective";
-
-        }
-
-        const adverbs = GrammarEngine.getDictionary("adverbs");
-
-        if (adverbs && adverbs.has(lower)) {
-
-            return "adverb";
-
-        }
-
-        const articles = GrammarEngine.getDictionary("articles");
-
-        if (articles && articles.has(lower)) {
-
-            return "article";
-
-        }
-
-        const pronouns = GrammarEngine.getDictionary("pronouns");
-
-        if (pronouns && pronouns.has(lower)) {
-
-            return "pronoun";
-
-        }
-
-        const prepositions = GrammarEngine.getDictionary("prepositions");
-
-        if (prepositions && prepositions.has(lower)) {
-
-            return "preposition";
-
-        }
-
-        return "word";
-
+        return "word"; // النوع الافتراضي إذا لم يكن في أي قاموس
     }
 
     /* ======================================================
-       Get Words Only
+       Helpers
     ====================================================== */
-
     words(tokens) {
-
-        return tokens.filter(
-
-            token => token.isWord
-
-        );
-
+        return tokens.filter(token => token.isWord);
     }
-
-    /* ======================================================
-       Get Punctuation
-    ====================================================== */
 
     punctuation(tokens) {
-
-        return tokens.filter(
-
-            token => token.isPunctuation
-
-        );
-
+        return tokens.filter(token => token.isPunctuation);
     }
-
-    /* ======================================================
-       Count Words
-    ====================================================== */
 
     count(tokens) {
-
         return this.words(tokens).length;
-
     }
-
 }
 
-const tokenizer = new Tokenizer();
+// 1. إنشاء نسخة واحدة (Singleton)
+const tokenizerInstance = new Tokenizer();
 
-window.tokenizer = tokenizer;
+// 2. إصلاح الخطأ رقم 3: توفيره على الـ window بالحالتين لضمان عدم تعطل أي ملف آخر
+window.tokenizer = tokenizerInstance;
+window.Tokenizer = tokenizerInstance; 
 
-GrammarEngine.registerManager(
-
-    "tokenizer",
-
-    tokenizer
-
-);
-```
+// 3. تسجيله بشكل آمن داخل المحرك الأساسي
+if (window.GrammarEngine && typeof window.GrammarEngine.registerManager === 'function') {
+    window.GrammarEngine.registerManager("tokenizer", tokenizerInstance);
+} else {
+    console.warn("[Tokenizer] GrammarEngine is missing! Make sure engine.js is loaded before tokenizer.js.");
+}
