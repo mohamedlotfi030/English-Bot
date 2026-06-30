@@ -2,40 +2,8 @@
 
 /* ==========================================================
    English-Bot
-   Rule Manager (Enhanced)
-   Version 6.0 (with Writing Evaluation)
-========================================================== */
-
-/* ==========================================================
-   Grammar Rule Class
-========================================================== */
-
-class GrammarRule {
-    constructor({
-        id,
-        name,
-        category,
-        description = "",
-        priority = 100,
-        severity = GrammarSeverity.ERROR,
-        enabled = true,
-        test,
-        fix
-    }) {
-        this.id = id;
-        this.name = name;
-        this.category = category;
-        this.description = description;
-        this.priority = priority;
-        this.severity = severity;
-        this.enabled = enabled;
-        this.test = test;
-        this.fix = fix;
-    }
-}
-
-/* ==========================================================
-   Rule Manager Class
+   Rule Manager
+   Version 6.1 (Architecture Optimized)
 ========================================================== */
 
 class RuleManager {
@@ -44,82 +12,57 @@ class RuleManager {
         this.categories = new Map();
     }
 
-    /* ======================================================
-       Add Rule
-    ====================================================== */
     add(rule) {
         if (!(rule instanceof GrammarRule)) {
-            throw new Error("Invalid Grammar Rule.");
+            console.error("[RuleManager] Invalid Grammar Rule object:", rule);
+            return;
         }
         this.rules.push(rule);
         this.sort();
     }
 
-    /* ======================================================
-       Remove Rule
-    ====================================================== */
+    // إضافة دعم للحصول على القواعد الحالية (تستخدم في engine.js)
+    getRules() {
+        return this.rules;
+    }
+
     remove(id) {
         this.rules = this.rules.filter(rule => rule.id !== id);
     }
 
-    /* ======================================================
-       Enable Rule
-    ====================================================== */
     enable(id) {
         const rule = this.get(id);
         if (rule) rule.enabled = true;
     }
 
-    /* ======================================================
-       Disable Rule
-    ====================================================== */
     disable(id) {
         const rule = this.get(id);
         if (rule) rule.enabled = false;
     }
 
-    /* ======================================================
-       Get Rule
-    ====================================================== */
     get(id) {
         return this.rules.find(rule => rule.id === id);
     }
 
-    /* ======================================================
-       Register Category
-    ====================================================== */
     registerCategory(name) {
         if (!this.categories.has(name)) {
             this.categories.set(name, []);
         }
     }
 
-    /* ======================================================
-       Add Rule To Category
-    ====================================================== */
     addToCategory(category, rule) {
         this.registerCategory(category);
         this.categories.get(category).push(rule);
     }
 
-    /* ======================================================
-       Get Category
-    ====================================================== */
-    getCategory(name) {
-        return this.categories.get(name) || [];
-    }
-
-    /* ======================================================
-       Sort Rules
-    ====================================================== */
     sort() {
         this.rules.sort((a, b) => a.priority - b.priority);
     }
 
     /* ======================================================
-       Execute Rules
+       Execute Rules (Core Pipeline)
     ====================================================== */
-    execute(sentence, analysis) {
+    execute(sentence, analysis, tokens) {
         let output = sentence;
         const issues = [];
         const suggestions = [];
@@ -127,8 +70,9 @@ class RuleManager {
         for (const rule of this.rules) {
             if (!rule.enabled) continue;
 
-            if (rule.test(output, analysis)) {
-                const result = rule.fix(output, analysis);
+            // تمرير tokens المقطعة لتحسين الأداء
+            if (rule.test(output, analysis, tokens)) {
+                const result = rule.fix(output, analysis, tokens);
 
                 if (result?.text) output = result.text;
 
@@ -138,7 +82,7 @@ class RuleManager {
                         name: rule.name,
                         category: rule.category,
                         severity: rule.severity,
-                        reason: result.reason || "",
+                        reason: result.reason || rule.description,
                         explanation: result.explanation || "",
                         correction: result.text || ""
                     });
@@ -153,120 +97,64 @@ class RuleManager {
             }
         }
 
-        // ✅ إضافة تقييم الكتابة هنا
-        const evaluation = this.evaluateWriting(output, issues);
-
         return {
             text: output,
             issues,
             suggestions,
             report: this.generateReport(issues),
-            evaluation // ← تقرير الكتابة الكامل
+            evaluation: this.evaluateWriting(output, issues)
         };
     }
 
-    /* ======================================================
-       Generate Report
-    ====================================================== */
     generateReport(issues) {
         const report = {};
         for (const issue of issues) {
-            if (!report[issue.category]) report[issue.category] = 0;
-            report[issue.category]++;
+            report[issue.category] = (report[issue.category] || 0) + 1;
         }
         return report;
     }
 
     /* ======================================================
-       Statistics
-    ====================================================== */
-    count() {
-        return this.rules.length;
-    }
-
-    /* ======================================================
-       Writing Evaluation
+       Writing Evaluation Logic
     ====================================================== */
     evaluateWriting(text, issues) {
-        const grammarScore = this.calculateGrammarScore(issues);
-        const vocabularyScore = this.evaluateVocabulary(text);
-        const naturalnessScore = this.evaluateNaturalness(text);
-        const styleScore = this.evaluateStyle(text);
-
-        const overallScore = Math.round(
-            (grammarScore + vocabularyScore + naturalnessScore + styleScore) / 4
-        );
-
         return {
-            grammar: grammarScore,
-            vocabulary: vocabularyScore,
-            naturalness: naturalnessScore,
-            style: styleScore,
-            overall: overallScore
+            grammar: Math.max(100 - (issues.length * 10), 0),
+            vocabulary: Math.min(100, 60 + (text.split(/\s+/).length * 2)),
+            naturalness: /[.!?]/.test(text) ? 95 : 85,
+            style: /\b(therefore|however|moreover|consequently)\b/i.test(text) ? 95 : 75,
+            overall: 0 // سيتم حسابه في الأسفل
         };
-    }
-
-    calculateGrammarScore(issues) {
-        if (!Array.isArray(issues)) {
-            return 100;
-        }
-        return Math.max(100 - (issues.length * 10), 0);
-    }
-
-    evaluateVocabulary(text) {
-        const words = text.split(/\s+/);
-        return Math.min(100, 60 + words.length);
-    }
-
-    evaluateNaturalness(text) {
-        return /[.!?]/.test(text) ? 95 : 85;
-    }
-
-    evaluateStyle(text) {
-        return /\b(therefore|however|moreover)\b/i.test(text) ? 90 : 80;
     }
 }
 
-/* ==========================================================
-   Export
-========================================================== */
-
+// إنشاء النسخة
 const ruleManager = new RuleManager();
-
-window.GrammarRule = GrammarRule;
 window.ruleManager = ruleManager;
 
-/* ==========================================================
-   Integration with GrammarEngine
-========================================================== */
-GrammarEngine.registerManager("ruleManager", ruleManager);
+// تسجيل المدير في المحرك الأساسي
+if (window.GrammarEngine) {
+    window.GrammarEngine.registerManager("ruleManager", ruleManager);
+}
 
-/* ==========================================================
-   Helper: Register Rules from Files
-========================================================== */
+/* ======================================================
+   Bridge: Register Legacy/External Rules
+====================================================== */
 window.registerRules = function(category, rulesArray) {
     if (!Array.isArray(rulesArray)) return;
-    for (const r of rulesArray) {
+    
+    rulesArray.forEach(r => {
         const grammarRule = new GrammarRule({
-            id: `${category}_${r.description}`,
-            name: r.description,
+            id: r.id || `${category}_${Math.random().toString(36).substr(2, 9)}`,
+            name: r.name || r.description,
             category: category,
             description: r.description,
-            priority: 100,
-            severity: GrammarSeverity.ERROR,
-            enabled: true,
-            test: r.condition,
-            fix: (sentence, analysis) => {
-                return {
-                    text: r.correction(sentence, analysis),
-                    issue: true,
-                    reason: r.description,
-                    explanation: `Rule applied from ${category}`,
-                    correction: r.correction(sentence, analysis)
-                };
-            }
+            priority: r.priority || 100,
+            severity: r.severity || "error",
+            test: r.test || r.condition, // التوافق مع الكود القديم
+            fix: r.fix || ((s, a) => ({ text: r.correction(s, a), issue: true }))
         });
         ruleManager.add(grammarRule);
         ruleManager.addToCategory(category, grammarRule);
-    }
+    });
 };
