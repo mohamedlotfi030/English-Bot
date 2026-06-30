@@ -3,112 +3,67 @@
 /* ==========================================================
    English-Bot
    Loader
-   Version 5.0
+   Version 1.0
 ========================================================== */
 
 const Loader = (() => {
 
-    const groups = {
+    let initialized = false;
 
-        utilities: [
-            "./js/utils.js",
-            "./js/storage.js",
-            "./js/speech.js",
-            "./js/api.js"
-        ],
+    async function initialize() {
 
-        engine: [
-            "./js/engine/engine.js",
-            "./js/engine/grammar.js",
-            "./js/engine/tokenizer.js",
-            "./js/engine/analyzer.js",
-            "./js/engine/corrector.js",
-            "./js/engine/ruleManager.js"
-        ],
+        if (initialized) {
 
-        dictionaries: [
-
-        ],
-
-        rules: [
-
-        ],
-
-        application: [
-            "./js/checker.js",
-            "./js/dictionary.js",
-            "./js/ui.js",
-            "./js/app.js"
-        ]
-
-    };
-
-    async function loadScript(path){
-
-        return new Promise((resolve,reject)=>{
-
-            const script=document.createElement("script");
-
-            script.src=path;
-
-            script.defer=true;
-
-            script.onload=()=>{
-
-                console.log("Loaded:",path);
-
-                resolve();
-
-            };
-
-            script.onerror=()=>{
-
-                console.error("Failed:",path);
-
-                reject(path);
-
-            };
-
-            document.body.appendChild(script);
-
-        });
-
-    }
-
-    async function loadGroup(group){
-
-        for(const file of group){
-
-            await loadScript(file);
+            return;
 
         }
 
-    }
-
-    async function initialize(){
-
         console.log("Loading English-Bot...");
 
-        await loadGroup(groups.utilities);
+        if (!window.GrammarEngine) {
 
-        await loadGroup(groups.engine);
+            throw new Error("GrammarEngine is missing.");
 
-        await loadGroup(groups.dictionaries);
+        }
 
-        await loadGroup(groups.rules);
+        if (!window.tokenizer) {
 
-        await loadGroup(groups.application);
+            throw new Error("Tokenizer is missing.");
 
-        console.log("English-Bot Loaded Successfully.");
+        }
+
+        if (!window.analyzer) {
+
+            throw new Error("Analyzer is missing.");
+
+        }
+
+        if (!window.corrector) {
+
+            throw new Error("Corrector is missing.");
+
+        }
+
+        if (!window.ruleManager) {
+
+            throw new Error("RuleManager is missing.");
+
+        }
+
+        GrammarEngine.initialize();
+
+        initialized = true;
+
+        console.log("English-Bot initialized successfully.");
 
     }
 
-    return{
+    return {
 
-        initialize,
-
-        groups
+        initialize
 
     };
 
 })();
+
+window.Loader = Loader;
