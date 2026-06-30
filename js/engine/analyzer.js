@@ -2,13 +2,18 @@
 
 /* ==========================================================
    English-Bot
-   Analyzer (Enhanced)
-   Version 5.0
+   Analyzer (Enhanced & Architecture Fixed)
+   Version 5.1
 ========================================================== */
 
 class Analyzer {
     constructor() {
         this.reset();
+        
+        // قوائم احتياطية لضمان عمل المحلل حتى لو لم تكن القواميس معقدة
+        this.fallbackModals = ["can", "could", "shall", "should", "will", "would", "may", "might", "must", "ought"];
+        this.fallbackAuxiliaries = ["am", "is", "are", "was", "were", "be", "been", "being", "have", "has", "had", "do", "does", "did"];
+        this.fallbackConjunctions = ["and", "but", "or", "so", "because", "although", "if", "unless", "since", "while"];
     }
 
     /* ======================================================
@@ -42,6 +47,11 @@ class Analyzer {
        Analyze Sentence
     ====================================================== */
     analyze(tokens) {
+        if (!tokens || !Array.isArray(tokens) || tokens.length === 0) {
+            this.reset();
+            return this.buildAnalysis();
+        }
+
         this.reset();
         this.tokens = tokens;
 
@@ -93,6 +103,28 @@ class Analyzer {
             complexity: this.complexity
         };
     }
+
+    /* ======================================================
+       Helper: Safe Dictionary Check
+    ====================================================== */
+    checkVerbProperty(word, property, fallbackList) {
+        if (fallbackList.includes(word)) return true;
+
+        if (!window.GrammarEngine) return false;
+        const dict = window.GrammarEngine.getDictionary("verbs");
+        
+        // التحقق الآمن في حال كان القاموس Map وكان يخزن خصائص معقدة
+        if (dict && typeof dict.get === 'function') {
+            try {
+                const verbData = dict.get(word);
+                return verbData ? !!verbData[property] : false;
+            } catch (e) {
+                return false;
+            }
+        }
+        return false;
+    }
+
     /* ======================================================
        Detection Methods
     ====================================================== */
@@ -126,11 +158,11 @@ class Analyzer {
     }
 
     detectAuxiliaries() {
-        this.auxiliaries = this.tokens.filter(t => t.type === "verb" && GrammarEngine.getDictionary("verbs").get(t.lower)?.auxiliary);
+        this.auxiliaries = this.tokens.filter(t => this.checkVerbProperty(t.lower, "auxiliary", this.fallbackAuxiliaries));
     }
 
     detectModals() {
-        this.modals = this.tokens.filter(t => GrammarEngine.getDictionary("verbs").get(t.lower)?.modal);
+        this.modals = this.tokens.filter(t => this.checkVerbProperty(t.lower, "modal", this.fallbackModals));
     }
 
     detectSubject() {
@@ -141,7 +173,7 @@ class Analyzer {
     }
 
     detectMainVerb() {
-        const verb = this.tokens.find(t => t.type === "verb" && !GrammarEngine.getDictionary("verbs").get(t.lower)?.auxiliary);
+        const verb = this.tokens.find(t => t.type === "verb" && !this.checkVerbProperty(t.lower, "auxiliary", this.fallbackAuxiliaries) && !this.checkVerbProperty(t.lower, "modal", this.fallbackModals));
         if (verb) {
             this.mainVerb = verb.value;
             this.verbForm = verb.type;
@@ -160,21 +192,26 @@ class Analyzer {
     }
 
     detectTimeExpressions() {
-        this.timeExpressions = this.tokens.filter(t => ["yesterday", "today", "tomorrow"].includes(t.lower));
+        this.timeExpressions = this.tokens.filter(t => ["yesterday", "today", "tomorrow", "now", "later"].includes(t.lower));
     }
 
     detectTense() {
         if (this.timeExpressions.some(t => t.lower === "yesterday")) {
             this.tense = "past";
-        } else if (this.timeExpressions.some(t => t.lower === "tomorrow")) {
+        } else if (this.timeExpressions.some(t => t.lower === "tomorrow") || this.modals.some(t => ["will", "shall"].includes(t.lower))) {
             this.tense = "future";
         } else {
-            this.tense = "present";
+            this.tense = "present"; // افتراضي
         }
     }
 
     detectVoice() {
-        if (this.auxiliaries.some(t => t.lower === "be") && this.tokens.some(t => t.type === "participle")) {
+        // تم التعديل لتفادي الاعتماد على نوع participle غير الموجود في Tokenizer
+        const hasBe = this.auxiliaries.some(t => ["be", "is", "are", "am", "was", "were", "been", "being"].includes(t.lower));
+        // نفترض وجود مبني للمجهول إذا وجدنا فعل مساعد be مع فعل رئيسي ينتهي بـ ed أو en (كتقييم مبدئي)
+        const hasPastParticiple = this.tokens.some(t => t.type === "verb" && (t.lower.endsWith("ed") || t.lower.endsWith("en")));
+        
+        if (hasBe && hasPastParticiple) {
             this.voice = "passive";
         }
     }
@@ -184,18 +221,24 @@ class Analyzer {
     }
 
     detectComplexity() {
-        const conjunctions = this.tokens.filter(t => t.type === "conjunction");
-        if (conjunctions.length > 0) {
+        // تم الاعتماد على قائمة احتياطية للروابط نظراً لعدم وجودها في التقطيع
+        this.conjunctions = this.tokens.filter(t => this.fallbackConjunctions.includes(t.lower));
+        if (this.conjunctions.length > 0) {
             this.complexity = "complex";
         }
     }
 }
 
 /* ==========================================================
-   Export
+   Export & Registration
 ========================================================== */
 
-const analyzer = new Analyzer();
-window.analyzer = analyzer;
+const analyzerInstance = new Analyzer();
+window.analyzer = analyzerInstance;
+window.Analyzer = analyzerInstance; // للتوافق مع المحرك الأساسي
 
-GrammarEngine.registerManager("analyzer", analyzer);
+if (window.GrammarEngine && typeof window.GrammarEngine.registerManager === 'function') {
+    window.GrammarEngine.registerManager("analyzer", analyzerInstance);
+} else {
+    console.warn("[Analyzer] GrammarEngine is missing! Make sure engine.js is loaded before analyzer.js.");
+}
