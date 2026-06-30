@@ -1,7 +1,7 @@
 /* ==========================================================
    English-Bot
    checker.js
-   Version 1.1
+   Version 2.1 (RuleManager + Writing Evaluation)
 ========================================================== */
 
 "use strict";
@@ -10,679 +10,221 @@
    Main Function
 ========================================================== */
 
-async function processText(){
+async function processText() {
+    const textarea = document.getElementById("userInput");
+    const resultBox = document.getElementById("checkerResult");
 
-    const textarea = document.getElementById(
-
-        "userInput"
-
-    );
-
-    const resultBox = document.getElementById(
-
-        "checkerResult"
-
-    );
-
-    if(!textarea || !resultBox){
-
+    if (!textarea || !resultBox) {
         return;
-
     }
 
     let input = textarea.value.trim();
 
-    if(!input){
-
-        showToast(
-
-            "Please enter a sentence.",
-
-            "error"
-
-        );
-
+    if (!input) {
+        showToast("Please enter a sentence.", "error");
         resultBox.classList.remove("hidden");
-
         resultBox.innerHTML = `
-
             <p class="text-danger">
-
                 Please enter a sentence.
-
             </p>
-
         `;
-
         return;
-
     }
 
     showLoader();
-
     resultBox.classList.remove("hidden");
-
     resultBox.innerHTML = `
-
         <p>
-
             Checking grammar...
-
         </p>
-
     `;
 
+    // تطبيق قواعد التنسيق الأساسية
     input = applyLogicRules(input);
 
-    try{
+    try {
+        // ✅ المحرك الأساسي: RuleManager
+        const analysis = GrammarEngine.analyze(input);
+        const response = ruleManager.execute(input, analysis);
 
-        const response = await checkGrammar(input);
+        // عرض النتائج من RuleManager
+        renderGrammarResult(input, response);
 
-        if(!response.success){
+        // عرض تقييم الكتابة
+        renderWritingEvaluation(response);
 
-            throw new Error(
+        // حفظ النص المصحح في التاريخ
+        saveHistory(response.text);
 
-                response.error ||
+        // 🔥 مساعد إضافي: LanguageTool (اختياري)
+        // const ltResponse = await checkGrammar(input);
+        // if (ltResponse.success) {
+        //     console.log("LanguageTool suggestions:", ltResponse.data);
+        // }
 
-                "Grammar request failed."
-
-            );
-
-        }
-
-        renderGrammarResult(
-
-            input,
-
-            response.data
-
-        );
-
-        saveHistory(input);
-
-    }
-
-    catch(error){
-
+    } catch (error) {
         console.error(error);
-
-        showToast(
-
-            "Unable to check grammar.",
-
-            "error"
-
-        );
-
+        showToast("Unable to process grammar rules.", "error");
         resultBox.innerHTML = `
-
             <p class="text-danger">
-
-                Unable to connect to the grammar service.
-
+                Unable to process grammar rules.
             </p>
-
         `;
-
-    }
-
-    finally{
-
+    } finally {
         hideLoader();
-
     }
-
 }
-/* ==========================================================
-   Logic Rules
-========================================================== */
-
-/**
- * Apply custom grammar rules
- * before sending text to LanguageTool.
- */
 
 /* ==========================================================
-   Smart Grammar Rules
+   Logic Rules (Basic Formatting Only)
 ========================================================== */
 
-function applyLogicRules(text){
-
+function applyLogicRules(text) {
     let sentence = text.trim();
 
-    // ======================================================
     // Normalize spaces
-    // ======================================================
+    sentence = sentence.replace(/\s+/g, " ");
 
-    sentence = sentence.replace(/\s+/g," ");
-
-    // ======================================================
     // Capitalize first letter
-    // ======================================================
+    sentence = sentence.charAt(0).toUpperCase() + sentence.slice(1);
 
-    sentence =
-        sentence.charAt(0).toUpperCase() +
-        sentence.slice(1);
-
-    // ======================================================
     // Pronoun I
-    // ======================================================
+    sentence = sentence.replace(/\bi\b/g, "I");
 
-    sentence = sentence.replace(/\bi\b/g,"I");
-
-    // ======================================================
-    // Yesterday + Future
-    // ======================================================
-
-    sentence = sentence.replace(
-
-        /\bwill\s+go\b(?=.*\byesterday\b)/i,
-
-        "went"
-
-    );
-
-    sentence = sentence.replace(
-
-        /\bwill\s+come\b(?=.*\byesterday\b)/i,
-
-        "came"
-
-    );
-
-    sentence = sentence.replace(
-
-        /\bwill\s+leave\b(?=.*\byesterday\b)/i,
-
-        "left"
-
-    );
-
-    // ======================================================
-    // Tomorrow + Past
-    // ======================================================
-
-    sentence = sentence.replace(
-
-        /\bwent\b(?=.*\btomorrow\b)/i,
-
-        "will go"
-
-    );
-
-    sentence = sentence.replace(
-
-        /\bcame\b(?=.*\btomorrow\b)/i,
-
-        "will come"
-
-    );
-
-    sentence = sentence.replace(
-
-        /\bleft\b(?=.*\btomorrow\b)/i,
-
-        "will leave"
-
-    );
-
-    // ======================================================
-    // Present Perfect
-    // ======================================================
-
-    sentence = sentence.replace(
-
-        /\bhave\s+went\b/gi,
-
-        "have gone"
-
-    );
-
-    sentence = sentence.replace(
-
-        /\bhas\s+went\b/gi,
-
-        "has gone"
-
-    );
-
-    sentence = sentence.replace(
-
-        /\bhave\s+ate\b/gi,
-
-        "have eaten"
-
-    );
-
-    sentence = sentence.replace(
-
-        /\bhas\s+ate\b/gi,
-
-        "has eaten"
-
-    );
-
-    // ======================================================
-    // Did + Past
-    // ======================================================
-
-    sentence = sentence.replace(
-
-        /\bdid\s+went\b/gi,
-
-        "did go"
-
-    );
-
-    sentence = sentence.replace(
-
-        /\bdid\s+came\b/gi,
-
-        "did come"
-
-    );
-
-    sentence = sentence.replace(
-
-        /\bdid\s+ate\b/gi,
-
-        "did eat"
-
-    );
-
-    // ======================================================
-    // Does + Verb
-    // ======================================================
-
-    sentence = sentence.replace(
-
-        /\bdoes\s+goes\b/gi,
-
-        "does go"
-
-    );
-
-    sentence = sentence.replace(
-
-        /\bdoes\s+likes\b/gi,
-
-        "does like"
-
-    );
-
-    sentence = sentence.replace(
-
-        /\bdoes\s+plays\b/gi,
-
-        "does play"
-
-    );
-
-    // ======================================================
-    // Don't / Doesn't
-    // ======================================================
-
-    sentence = sentence.replace(
-
-        /\bhe\s+don't\b/gi,
-
-        "He doesn't"
-
-    );
-
-    sentence = sentence.replace(
-
-        /\bshe\s+don't\b/gi,
-
-        "She doesn't"
-
-    );
-
-    sentence = sentence.replace(
-
-        /\bit\s+don't\b/gi,
-
-        "It doesn't"
-
-    );
-
-    // ======================================================
-    // Third Person
-    // ======================================================
-
-    sentence = sentence.replace(
-
-        /\bhe\s+go\b/gi,
-
-        "He goes"
-
-    );
-
-    sentence = sentence.replace(
-
-        /\bshe\s+go\b/gi,
-
-        "She goes"
-
-    );
-
-    sentence = sentence.replace(
-
-        /\bhe\s+have\b/gi,
-
-        "He has"
-
-    );
-
-    sentence = sentence.replace(
-
-        /\bshe\s+have\b/gi,
-
-        "She has"
-
-    );
-
-    // ======================================================
-    // Missing Articles
-    // ======================================================
-
-    sentence = sentence.replace(
-
-        /\bI am doctor\b/i,
-
-        "I am a doctor"
-
-    );
-
-    sentence = sentence.replace(
-
-        /\bI am teacher\b/i,
-
-        "I am a teacher"
-
-    );
-
-    sentence = sentence.replace(
-
-        /\bI am engineer\b/i,
-
-        "I am an engineer"
-
-    );
-
-    sentence = sentence.replace(
-
-        /\bHe is doctor\b/i,
-
-        "He is a doctor"
-
-    );
-
-    sentence = sentence.replace(
-
-        /\bShe is doctor\b/i,
-
-        "She is a doctor"
-
-    );
-
-    // ======================================================
-    // Irregular Plurals
-    // ======================================================
-
-    sentence = sentence.replace(
-
-        /\bchilds\b/gi,
-
-        "children"
-
-    );
-
-    sentence = sentence.replace(
-
-        /\bpeoples\b/gi,
-
-        "people"
-
-    );
-
-    sentence = sentence.replace(
-
-        /\binformations\b/gi,
-
-        "information"
-
-    );
-
-    sentence = sentence.replace(
-
-        /\badvices\b/gi,
-
-        "advice"
-
-    );
-
-    // ======================================================
-    // Common Prepositions
-    // ======================================================
-
-    sentence = sentence.replace(
-
-        /\bmarried with\b/gi,
-
-        "married to"
-
-    );
-
-    sentence = sentence.replace(
-
-        /\binterested on\b/gi,
-
-        "interested in"
-
-    );
-
-    sentence = sentence.replace(
-
-        /\bgood in\b/gi,
-
-        "good at"
-
-    );
-
-    sentence = sentence.replace(
-
-        /\bdepend of\b/gi,
-
-        "depend on"
-
-    );
-
-    // ======================================================
-    // Punctuation
-    // ======================================================
-
-    if(!/[.!?]$/.test(sentence)){
-
+    // Punctuation at the end
+    if (!/[.!?]$/.test(sentence)) {
         sentence += ".";
-
     }
 
     return sentence;
-
 }
 
 /* ==========================================================
    Accuracy Score
 ========================================================== */
 
-function calculateGrammarScore(matches){
-
-    if(!Array.isArray(matches)){
-
+function calculateGrammarScore(issues) {
+    if (!Array.isArray(issues)) {
         return 100;
-
     }
-
-    return Math.max(
-
-        100 - (matches.length * 10),
-
-        0
-
-    );
-
+    return Math.max(100 - (issues.length * 10), 0);
 }
+
 /* ==========================================================
    Grammar Result
 ========================================================== */
 
-function renderGrammarResult(original, data){
-
-    const resultBox = document.getElementById(
-
-        "checkerResult"
-
-    );
-
-    if(!resultBox){
-
+function renderGrammarResult(original, data) {
+    const resultBox = document.getElementById("checkerResult");
+    if (!resultBox) {
         return;
-
     }
 
-    let corrected = original;
+    // النص المصحح من RuleManager
+    const corrected = data.text || original;
 
-    const matches = Array.isArray(data.matches)
+    // قائمة الأخطاء
+    const issues = Array.isArray(data.issues) ? data.issues : [];
 
-        ? [...data.matches]
+    // حساب الدرجات
+    const score = calculateGrammarScore(issues);
 
-        : [];
-
-    matches.sort(
-
-        (a, b) => b.offset - a.offset
-
-    );
-
-    for(const match of matches){
-
-        if(
-
-            Array.isArray(match.replacements) &&
-
-            match.replacements.length
-
-        ){
-
-            corrected =
-
-                corrected.substring(
-
-                    0,
-
-                    match.offset
-
-                )
-
-                +
-
-                match.replacements[0].value
-
-                +
-
-                corrected.substring(
-
-                    match.offset +
-
-                    match.length
-
-                );
-
-        }
-
-    }
-
-    const score = calculateGrammarScore(matches);
-
+    // النصوص الآمنة للعرض
     const safeOriginal = escapeHtml(original);
-
     const safeCorrected = escapeHtml(corrected);
-
     const speechText = JSON.stringify(corrected);
 
+    // بناء التقرير
     resultBox.innerHTML = `
-
-        <h3>
-
-            Grammar Report
-
-        </h3>
-
+        <h3>Grammar Report</h3>
         <hr>
-
-        <p>
-
-            <strong>Original:</strong>
-
-            ${safeOriginal}
-
-        </p>
-
+        <p><strong>Original:</strong> ${safeOriginal}</p>
         <br>
-
-        <p>
-
-            <strong>Corrected:</strong>
-
-            ${safeCorrected}
-
-        </p>
-
+        <p><strong>Corrected:</strong> ${safeCorrected}</p>
         <br>
-
-        <p>
-
-            <strong>Errors:</strong>
-
-            ${matches.length}
-
-        </p>
-
-        <p>
-
-            <strong>Accuracy:</strong>
-
-            ${score}%
-
-        </p>
-
+        <p><strong>Errors:</strong> ${issues.length}</p>
+        <p><strong>Accuracy:</strong> ${score}%</p>
         <div class="audio-group">
-
-            <button
-
-                class="audio-btn"
-
-                onclick='speak(${speechText},"en-US")'>
-
-                🇺🇸 US
-
-            </button>
-
-            <button
-
-                class="audio-btn"
-
-                onclick='speak(${speechText},"en-GB")'>
-
-                🇬🇧 UK
-
-            </button>
-
+            <button class="audio-btn" onclick='speak(${speechText},"en-US")'>🇺🇸 US</button>
+            <button class="audio-btn" onclick='speak(${speechText},"en-GB")'>🇬🇧 UK</button>
+            <button class="audio-btn" onclick='speakWord("${data.text}","en-US")'>🔊 Word US</button>
+            <button class="audio-btn" onclick='speakWord("${data.text}","en-GB")'>🔊 Word UK</button>
         </div>
-
+        <hr>
+        <h4>Details:</h4>
+        <ul>
+            ${issues.map(issue => `
+                <li>
+                    <strong>${escapeHtml(issue.name)}</strong> 
+                    (${escapeHtml(issue.category)}) → 
+                    ${escapeHtml(issue.reason)} 
+                    <br>
+                    <em>Correction:</em> ${escapeHtml(issue.correction)}
+                </li>
+            `).join("")}
+        </ul>
     `;
+}
 
+/* ==========================================================
+   Writing Evaluation
+========================================================== */
+
+function calculateWritingEvaluation(data) {
+    const grammarScore = calculateGrammarScore(data.issues);
+    const vocabularyScore = evaluateVocabulary(data.text);
+    const naturalnessScore = evaluateNaturalness(data.text);
+    const styleScore = evaluateStyle(data.text);
+
+    const overallScore = Math.round(
+        (grammarScore + vocabularyScore + naturalnessScore + styleScore) / 4
+    );
+
+    return {
+        grammar: grammarScore,
+        vocabulary: vocabularyScore,
+        naturalness: naturalnessScore,
+        style: styleScore,
+        overall: overallScore
+    };
+}
+
+function renderWritingEvaluation(data) {
+    const resultBox = document.getElementById("checkerResult");
+    if (!resultBox) return;
+
+    const evaluation = calculateWritingEvaluation(data);
+
+    resultBox.innerHTML += `
+        <hr>
+        <h3>Writing Evaluation</h3>
+        <p><strong>Grammar:</strong> ${evaluation.grammar}%</p>
+        <p><strong>Vocabulary:</strong> ${evaluation.vocabulary}%</p>
+        <p><strong>Naturalness:</strong> ${evaluation.naturalness}%</p>
+        <p><strong>Style:</strong> ${evaluation.style}%</p>
+        <p><strong>Overall:</strong> ${evaluation.overall}%</p>
+    `;
+}
+
+/* ==========================================================
+   Placeholder Evaluation Functions
+   (يمكنك تطويرها لاحقًا باستخدام التحليل اللغوي)
+========================================================== */
+
+function evaluateVocabulary(text) {
+    // مثال مبسط: كلما زاد طول النص زادت درجة المفردات
+    const words = text.split(/\s+/);
+    return Math.min(100, 60 + words.length);
+}
+
+function evaluateNaturalness(text) {
+    // مثال مبسط: يعتمد على وجود علامات ترقيم
+    return /[.!?]/.test(text) ? 95 : 85;
+}
+
+function evaluateStyle(text) {
+    // مثال مبسط: يعتمد على وجود كلمات رسمية
+    return /\b(therefore|however|moreover)\b/i.test(text) ? 90 : 80;
 }
 
 /* ==========================================================
