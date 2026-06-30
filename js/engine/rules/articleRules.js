@@ -3,70 +3,99 @@
 /* ==========================================================
    English-Bot
    Article Rules
-   Version 5.0
+   Version 6.0
 ========================================================== */
 
 const articleRules = [];
 
 /* ==========================================================
-   Rule Registration
+   Helper
 ========================================================== */
 
-function addArticleRule({
-    description,
-    condition,
-    correction
-}) {
-    articleRules.push({
-        description,
-        condition,
-        correction
-    });
+function addArticleRule(rule) {
+    articleRules.push(rule);
 }
 
 /* ==========================================================
-   Indefinite Articles (a/an)
+   a -> an
 ========================================================== */
 
 addArticleRule({
-    description: "Use 'a' before words starting with consonant sounds",
-    condition: (article, context) => context.type === "indefinite" && context.word.startsWithConsonant && article !== "a",
-    correction: () => "a"
-});
 
-addArticleRule({
-    description: "Use 'an' before words starting with vowel sounds",
-    condition: (article, context) => context.type === "indefinite" && context.word.startsWithVowel && article !== "an",
-    correction: () => "an"
+    id: "article_a_to_an",
+
+    name: "Use an before vowel sound",
+
+    category: GrammarCategory.ARTICLE,
+
+    description: "Replace 'a' with 'an' before vowel sounds.",
+
+    priority: 10,
+
+    test(sentence) {
+
+        return /\ba\s+(apple|egg|elephant|orange|umbrella|hour|honest)\b/i.test(sentence);
+
+    },
+
+    fix(sentence) {
+
+        return {
+
+            text: sentence.replace(/\ba\b/i, "an"),
+
+            issue: true,
+
+            reason: "Use 'an' before vowel sounds."
+
+        };
+
+    }
+
 });
 
 /* ==========================================================
-   Definite Article (the)
+   an -> a
 ========================================================== */
 
 addArticleRule({
-    description: "Use 'the' for specific or unique nouns",
-    condition: (article, context) => context.type === "definite" && !article,
-    correction: () => "the"
+
+    id: "article_an_to_a",
+
+    name: "Use a before consonant sound",
+
+    category: GrammarCategory.ARTICLE,
+
+    description: "Replace 'an' with 'a' before consonant sounds.",
+
+    priority: 20,
+
+    test(sentence) {
+
+        return /\ban\s+(book|car|dog|house|teacher|student)\b/i.test(sentence);
+
+    },
+
+    fix(sentence) {
+
+        return {
+
+            text: sentence.replace(/\ban\b/i, "a"),
+
+            issue: true,
+
+            reason: "Use 'a' before consonant sounds."
+
+        };
+
+    }
+
 });
 
 /* ==========================================================
-   Zero Article
+   Register
 ========================================================== */
 
-addArticleRule({
-    description: "No article with plural or uncountable nouns in general sense",
-    condition: (article, context) => context.isGeneral && (context.isPlural || context.isUncountable) && article,
-    correction: () => ""
-});
-
-/* ==========================================================
-   Register Rules
-========================================================== */
-
-GrammarEngine.registerRules(
-    "articleRules",
-    articleRules
-);
+GrammarEngine.registerRules(articleRules);
 
 window.articleRules = articleRules;
