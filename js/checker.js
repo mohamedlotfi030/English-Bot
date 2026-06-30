@@ -62,17 +62,22 @@ async function processText() {
         //     console.log("LanguageTool suggestions:", ltResponse.data);
         // }
 
-    } catch (error) {
-        console.error(error);
-        showToast("Unable to process grammar rules.", "error");
-        resultBox.innerHTML = `
-            <p class="text-danger">
-                Unable to process grammar rules.
-            </p>
-        `;
-    } finally {
-        hideLoader();
-    }
+   catch (error) {
+
+    console.error(error);
+
+    showToast(error.message, "error");
+
+    resultBox.innerHTML = `
+        <pre style="
+            white-space:pre-wrap;
+            color:red;
+            font-size:14px;
+        ">
+${error.stack}
+        </pre>
+    `;
+
 }
 
 /* ==========================================================
