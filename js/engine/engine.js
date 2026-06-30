@@ -4,11 +4,7 @@
    English-Bot
    Grammar Engine
    engine.js
-   Version 5.0 (with Writing Evaluation)
-========================================================== */
-
-/* ==========================================================
-   Grammar Engine
+   Version 5.1 (Architecture Fixed & Stabilized)
 ========================================================== */
 
 const GrammarEngine = (() => {
@@ -37,11 +33,9 @@ const GrammarEngine = (() => {
     function registerDictionary(name, dictionary) {
         dictionaries[name] = dictionary;
         statistics.loadedDictionaries++;
+        console.log(`[GrammarEngine] Dictionary registered: ${name}`);
     }
 
-    /* ======================================================
-       Get Dictionary
-    ====================================================== */
     function getDictionary(name) {
         return dictionaries[name];
     }
@@ -51,78 +45,111 @@ const GrammarEngine = (() => {
     ====================================================== */
     function registerManager(name, manager) {
         managers[name] = manager;
+        console.log(`[GrammarEngine] Manager registered: ${name}`);
+    }
+
+    /* ======================================================
+       Register Rules (✅ Fixes Error #6)
+    ====================================================== */
+    function registerRule(rule) {
+        if (managers.ruleManager) {
+            managers.ruleManager.register(rule);
+            statistics.loadedRules = managers.ruleManager.getRules ? managers.ruleManager.getRules().length : statistics.loadedRules + 1;
+        } else {
+            console.warn(`[GrammarEngine] RuleManager not loaded yet. Cannot register rule: ${rule.id}`);
+        }
+    }
+
+    function registerRules(rulesArray) {
+        if (Array.isArray(rulesArray)) {
+            rulesArray.forEach(rule => registerRule(rule));
+        } else {
+            console.error("[GrammarEngine] registerRules expects an Array.");
+        }
     }
 
     /* ======================================================
        Initialize
     ====================================================== */
     function initialize() {
-        if (initialized) {
-            return;
-        }
+        if (initialized) return;
 
-        if (!managers.ruleManager) {
-            throw new Error("RuleManager not loaded.");
-        }
-        if (!managers.tokenizer) {
-            throw new Error("Tokenizer not loaded.");
-        }
-        if (!managers.analyzer) {
-            throw new Error("Analyzer not loaded.");
-        }
-        if (!managers.corrector) {
-            throw new Error("Corrector not loaded.");
-        }
+        if (!managers.ruleManager) throw new Error("RuleManager not loaded.");
+        if (!managers.tokenizer) throw new Error("Tokenizer not loaded.");
+        if (!managers.analyzer) throw new Error("Analyzer not loaded.");
+        if (!managers.corrector) throw new Error("Corrector not loaded.");
 
         initialized = true;
-        console.log("Grammar Engine initialized.");
+        console.log("[GrammarEngine] Initialized successfully.");
     }
 
     /* ======================================================
        Analyze
     ====================================================== */
     function analyze(text) {
-        statistics.analyzedSentences++;
         const tokens = managers.tokenizer.tokenize(text);
         return managers.analyzer.analyze(tokens);
     }
 
     /* ======================================================
-       Correct
+       Correct (✅ Crash Prevention Added)
     ====================================================== */
     function correct(text) {
-        if (!initialized) {
-            initialize();
+        if (!text || text.trim() === "") {
+            return { text: "", issues: [], suggestions: [], report: {}, evaluation: {}, helper: {} };
         }
 
-        const analysis = analyze(text);
+        try {
+            if (!initialized) initialize();
 
-        // ✅ استخدام RuleManager كمحرك أساسي
-        const result = managers.ruleManager.execute(text, analysis);
+            statistics.analyzedSentences++;
+            
+            // 1. Tokenization & Analysis
+            const tokens = managers.tokenizer.tokenize(text);
+            const analysis = managers.analyzer.analyze(tokens);
 
-        // ✅ استخدام Corrector كمساعد إضافي
-        const correctedByHelper = managers.corrector.correct(text, analysis);
+            // 2. RuleManager Execution
+            const result = managers.ruleManager.execute(text, analysis, tokens);
 
-        statistics.corrections++;
+            // 3. Corrector Helper
+            const correctedByHelper = managers.corrector.correct(text, analysis, tokens);
 
-        // دمج النتائج: RuleManager هو الأساس، Corrector كمساعد
-        return {
-            text: result.text || correctedByHelper.text || text,
-            issues: result.issues || [],
-            suggestions: result.suggestions || [],
-            report: result.report || {},
-            evaluation: result.evaluation || {}, // ← تقييم الكتابة من RuleManager
-            helper: correctedByHelper // ← نتائج LanguageTool أو أي Corrector مساعد
-        };
+            statistics.corrections++;
+
+            // 4. Merge Results
+            return {
+                text: result.text || correctedByHelper.text || text,
+                issues: result.issues || [],
+                suggestions: result.suggestions || [],
+                report: result.report || {},
+                evaluation: result.evaluation || {}, 
+                helper: correctedByHelper 
+            };
+
+        } catch (error) {
+            console.error("[GrammarEngine Critical Error]", error.message);
+            // إرجاع كائن آمن لمنع انهيار واجهة المستخدم بالكامل
+            return {
+                text: text,
+                issues: [],
+                suggestions: [],
+                error: true,
+                message: `Unable to process grammar rules: ${error.message}`,
+                evaluation: {},
+                helper: {}
+            };
+        }
     }
 
     /* ======================================================
        Statistics
     ====================================================== */
     function getStatistics() {
-        return {
-            ...statistics
-        };
+        // تحديث عدد القواعد فعلياً من الـ RuleManager إن أمكن
+        if (managers.ruleManager && typeof managers.ruleManager.getRules === 'function') {
+            statistics.loadedRules = managers.ruleManager.getRules().length;
+        }
+        return { ...statistics };
     }
 
     /* ======================================================
@@ -135,6 +162,8 @@ const GrammarEngine = (() => {
         registerManager,
         registerDictionary,
         getDictionary,
+        registerRule,   // ✅ تمت الإضافة للـ API
+        registerRules,  // ✅ تمت الإضافة للـ API
         getStatistics
     };
 
