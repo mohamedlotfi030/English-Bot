@@ -70,9 +70,6 @@ addAgreementRule({
    Register Rules
 ========================================================== */
 
-GrammarEngine.registerRules(
-    "agreementRules",
-    agreementRules
-);
+GrammarEngine.registerRules(agreementRules);
 
 window.agreementRules = agreementRules;
