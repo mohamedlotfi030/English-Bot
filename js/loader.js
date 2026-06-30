@@ -2,66 +2,51 @@
 
 /* ==========================================================
    English-Bot
-   Loader
-   Version 1.0
+   Loader (Enhanced with UI Integration)
+   Version 1.1
 ========================================================== */
 
 const Loader = (() => {
 
     let initialized = false;
 
-    async function initialize() {
-
-        if (initialized) {
-
-            return;
-
-        }
+    function initialize() {
+        if (initialized) return;
 
         console.log("Loading English-Bot...");
 
-        if (!window.GrammarEngine) {
+        // 1. التأكد من وجود جميع المكونات
+        const dependencies = [
+            { name: "GrammarEngine", obj: window.GrammarEngine },
+            { name: "Tokenizer", obj: window.tokenizer },
+            { name: "Analyzer", obj: window.analyzer },
+            { name: "Corrector", obj: window.corrector },
+            { name: "RuleManager", obj: window.ruleManager }
+        ];
 
-            throw new Error("GrammarEngine is missing.");
-
+        for (const dep of dependencies) {
+            if (!dep.obj) {
+                console.error(`[Loader] Missing Dependency: ${dep.name}`);
+                throw new Error(`Missing dependency: ${dep.name}`);
+            }
         }
 
-        if (!window.tokenizer) {
-
-            throw new Error("Tokenizer is missing.");
-
-        }
-
-        if (!window.analyzer) {
-
-            throw new Error("Analyzer is missing.");
-
-        }
-
-        if (!window.corrector) {
-
-            throw new Error("Corrector is missing.");
-
-        }
-
-        if (!window.ruleManager) {
-
-            throw new Error("RuleManager is missing.");
-
-        }
-
+        // 2. تشغيل المحرك
         GrammarEngine.initialize();
-
         initialized = true;
 
-        console.log("English-Bot initialized successfully.");
+        // 3. تحديث واجهة المستخدم (إخفاء شاشة التحميل)
+        const loaderEl = document.getElementById('loader');
+        if (loaderEl) {
+            loaderEl.classList.add('hidden'); // تأكد أن لديك كلاس hidden في CSS {display: none}
+        }
 
+        console.log("English-Bot initialized successfully.");
     }
 
     return {
-
-        initialize
-
+        initialize,
+        isReady: () => initialized
     };
 
 })();
