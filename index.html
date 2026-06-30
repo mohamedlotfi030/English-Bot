@@ -1,464 +1,104 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
-    <!-- ======================================================
-         Meta
-    ======================================================= -->
-
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0">
-
-    <meta
-        name="description"
-        content="English-Bot is an AI-powered English learning assistant featuring grammar checking, dictionary, pronunciation, translation and vocabulary learning.">
-
-    <meta
-        name="keywords"
-        content="English, Grammar, Dictionary, AI, Vocabulary, Translation">
-
-    <meta
-        name="author"
-        content="A.S.I">
-
-    <meta
-        name="theme-color"
-        content="#16a34a">
-
-    <!-- ======================================================
-         Title
-    ======================================================= -->
-
-    <title>
-
-        English-Bot | AI English Learning Assistant
-
-    </title>
-
-    <!-- ======================================================
-         Favicon
-    ======================================================= -->
-
-    <link
-        rel="icon"
-        href="./assets/ASI-logo.png">
-
-    <!-- ======================================================
-         Fonts
-    ======================================================= -->
-
-    <link
-        rel="preconnect"
-        href="https://fonts.googleapis.com">
-
-    <link
-        rel="preconnect"
-        href="https://fonts.gstatic.com"
-        crossorigin>
-
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
-        rel="stylesheet">
-
-    <!-- ======================================================
-         Font Awesome
-    ======================================================= -->
-
-    <link
-        rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
-
-    <!-- ======================================================
-         CSS
-    ======================================================= -->
-
-    <link
-        rel="stylesheet"
-        href="./css/style.css">
-
-    <link
-        rel="stylesheet"
-        href="./css/responsive.css">
-
-    <link
-        rel="stylesheet"
-        href="./css/themes.css">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="English-Bot is an AI-powered English learning assistant featuring grammar checking, dictionary, pronunciation, translation and vocabulary learning.">
+    <meta name="keywords" content="English, Grammar, Dictionary, AI, Vocabulary, Translation">
+    <meta name="author" content="A.S.I">
+    <meta name="theme-color" content="#16a34a">
+    <title>English-Bot | AI English Learning Assistant</title>
+    
+    <link rel="icon" href="./assets/ASI-logo.png">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/responsive.css">
+    <link rel="stylesheet" href="./css/themes.css">
 </head>
 
 <body>
 
 <div class="app">
-        <!-- ======================================================
-         Sidebar
-    ======================================================= -->
-
     <aside class="sidebar">
-
         <div class="logo">
-
-            <img
-                src="./assets/ASI-logo.png"
-                alt="English-Bot Logo">
-
+            <img src="./assets/ASI-logo.png" alt="English-Bot Logo">
             <div>
-
                 <h2>English-Bot</h2>
-
                 <small>Powered by A.S.I</small>
-
             </div>
-
         </div>
-
         <nav class="menu">
-
-            <button
-                class="nav-item active"
-                data-page="home">
-
-                <i class="fa-solid fa-house"></i>
-
-                <span>Home</span>
-
-            </button>
-
-            <button
-                class="nav-item"
-                data-page="checker">
-
-                <i class="fa-solid fa-spell-check"></i>
-
-                <span>Grammar Checker</span>
-
-            </button>
-
-            <button
-                class="nav-item"
-                data-page="dictionary">
-
-                <i class="fa-solid fa-book"></i>
-
-                <span>Dictionary</span>
-
-            </button>
-
-            <button
-                class="nav-item"
-                data-page="vocabulary">
-
-                <i class="fa-solid fa-graduation-cap"></i>
-
-                <span>Vocabulary</span>
-
-            </button>
-
-            <button
-                class="nav-item"
-                data-page="favorites">
-
-                <i class="fa-solid fa-heart"></i>
-
-                <span>Favorites</span>
-
-            </button>
-
-            <button
-                class="nav-item"
-                data-page="history">
-
-                <i class="fa-solid fa-clock-rotate-left"></i>
-
-                <span>History</span>
-
-            </button>
-
-            <button
-                class="nav-item"
-                data-page="settings">
-
-                <i class="fa-solid fa-gear"></i>
-
-                <span>Settings</span>
-
-            </button>
-
+            <button class="nav-item active" data-page="home"><i class="fa-solid fa-house"></i> <span>Home</span></button>
+            <button class="nav-item" data-page="checker"><i class="fa-solid fa-spell-check"></i> <span>Grammar Checker</span></button>
+            <button class="nav-item" data-page="dictionary"><i class="fa-solid fa-book"></i> <span>Dictionary</span></button>
+            <button class="nav-item" data-page="vocabulary"><i class="fa-solid fa-graduation-cap"></i> <span>Vocabulary</span></button>
+            <button class="nav-item" data-page="favorites"><i class="fa-solid fa-heart"></i> <span>Favorites</span></button>
+            <button class="nav-item" data-page="history"><i class="fa-solid fa-clock-rotate-left"></i> <span>History</span></button>
+            <button class="nav-item" data-page="settings"><i class="fa-solid fa-gear"></i> <span>Settings</span></button>
         </nav>
-
         <div class="sidebar-footer">
-
-            <small>
-
-                Version 5.0
-
-            </small>
-
+            <small>Version 5.0</small>
         </div>
-
     </aside>
 
-    <!-- ======================================================
-         Main
-    ======================================================= -->
-
     <div class="main">
-
         <header class="header">
-
             <div class="header-left">
-
-                <h1 id="pageTitle">
-
-                    Home
-
-                </h1>
-
-                <p>
-
-                    Improve your English every day.
-
-                </p>
-
+                <h1 id="pageTitle">Home</h1>
+                <p>Improve your English every day.</p>
             </div>
-
             <div class="header-right">
-
-                <button
-                    class="icon-btn"
-                    id="menuBtn"
-                    aria-label="Menu">
-
-                    <i class="fa-solid fa-bars"></i>
-
-                </button>
-
-                <button
-                    class="icon-btn"
-                    id="searchBtn"
-                    aria-label="Search">
-
-                    <i class="fa-solid fa-magnifying-glass"></i>
-
-                </button>
-
-                <button
-                    class="icon-btn"
-                    id="themeBtn"
-                    aria-label="Theme">
-
-                    <i class="fa-solid fa-moon"></i>
-
-                </button>
-
+                <button class="icon-btn" id="menuBtn" aria-label="Menu"><i class="fa-solid fa-bars"></i></button>
+                <button class="icon-btn" id="searchBtn" aria-label="Search"><i class="fa-solid fa-magnifying-glass"></i></button>
+                <button class="icon-btn" id="themeBtn" aria-label="Theme"><i class="fa-solid fa-moon"></i></button>
             </div>
-
         </header>
 
-        <!-- ======================================================
-             Content
-        ======================================================= -->
-
-        <main
-            id="content"
-            role="main">
-
+        <main id="content" role="main">
             <section class="card hero">
-
-                <h2>
-
-                    Welcome to English-Bot 👋
-
-                </h2>
-
-                <p>
-
-                    Your complete AI English learning assistant.
-
-                </p>
-
+                <h2>Welcome to English-Bot 👋</h2>
+                <p>Your complete AI English learning assistant.</p>
             </section>
-
             <section class="dashboard">
-
-                <div class="card">
-
-                    <i class="fa-solid fa-spell-check"></i>
-
-                    <h3>
-
-                        Grammar Checker
-
-                    </h3>
-
-                    <p>
-
-                        Correct grammar with an advanced AI engine.
-
-                    </p>
-
-                </div>
-
-                <div class="card">
-
-                    <i class="fa-solid fa-book"></i>
-
-                    <h3>
-
-                        Dictionary
-
-                    </h3>
-
-                    <p>
-
-                        Definitions, pronunciation and examples.
-
-                    </p>
-
-                </div>
-
-                <div class="card">
-
-                    <i class="fa-solid fa-graduation-cap"></i>
-
-                    <h3>
-
-                        Vocabulary
-
-                    </h3>
-
-                    <p>
-
-                        Learn thousands of English words.
-
-                    </p>
-
-                </div>
-
-                <div class="card">
-
-                    <i class="fa-solid fa-chart-line"></i>
-
-                    <h3>
-
-                        Progress
-
-                    </h3>
-
-                    <p>
-
-                        Track your learning journey.
-
-                    </p>
-
-                </div>
-
+                <div class="card"><i class="fa-solid fa-spell-check"></i> <h3>Grammar Checker</h3><p>Correct grammar with an advanced AI engine.</p></div>
+                <div class="card"><i class="fa-solid fa-book"></i> <h3>Dictionary</h3><p>Definitions, pronunciation and examples.</p></div>
+                <div class="card"><i class="fa-solid fa-graduation-cap"></i> <h3>Vocabulary</h3><p>Learn thousands of English words.</p></div>
+                <div class="card"><i class="fa-solid fa-chart-line"></i> <h3>Progress</h3><p>Track your learning journey.</p></div>
             </section>
-                        </section>
-
         </main>
 
-        <!-- ======================================================
-             Footer
-        ======================================================= -->
-
         <footer class="footer">
-
-            <p>
-
-                © 2026 English-Bot
-
-            </p>
-
-            <p>
-
-                Powered by A.S.I
-
-            </p>
-
+            <p>© 2026 English-Bot</p>
+            <p>Powered by A.S.I</p>
         </footer>
-
     </div>
-
 </div>
 
-<!-- ======================================================
-     Mobile Overlay
-======================================================= -->
-
-<div
-    class="overlay"
-    id="overlay">
-</div>
-
-<!-- ======================================================
-     Toast
-======================================================= -->
-
-<div
-    id="toast"
-    class="toast">
-</div>
-
-<!-- ======================================================
-     Modal
-======================================================= -->
-
-<div
-    id="modalContainer">
-</div>
-
-<!-- ======================================================
-     Loader
-======================================================= -->
-
-<div
-    id="loader"
-    class="hidden"
-    role="status"
-    aria-live="polite">
-
+<div class="overlay" id="overlay"></div>
+<div id="toast" class="toast"></div>
+<div id="modalContainer"></div>
+<div id="loader" class="hidden" role="status" aria-live="polite">
     <div class="loader-spinner"></div>
-
-    <span>
-
-        Loading...
-
-    </span>
-
+    <span>Loading...</span>
 </div>
 
-<!-- ======================================================
-     JavaScript Files
-======================================================= -->
-    <!-- ======================================================
-     Utilities
-====================================================== -->
-
+<script src="./js/engine/engine.js"></script>
+<script src="./js/engine/grammar.js"></script>
+<script src="./js/engine/tokenizer.js"></script>
+<script src="./js/engine/analyzer.js"></script>
+<script src="./js/engine/corrector.js"></script>
+<script src="./js/engine/ruleManager.js"></script>
+<script src="./js/loader.js"></script>
 <script defer src="./js/utils.js"></script>
 <script defer src="./js/storage.js"></script>
 <script defer src="./js/speech.js"></script>
 <script defer src="./js/api.js"></script>
-
-<!-- ======================================================
-     Grammar Engine Core
-====================================================== -->
-
-<script defer src="./js/engine/engine.js"></script>
-<script defer src="./js/engine/grammar.js"></script>
-
-<script defer src="./js/engine/tokenizer.js"></script>
-<script defer src="./js/engine/analyzer.js"></script>
-<script defer src="./js/engine/corrector.js"></script>
-
-<script defer src="./js/engine/ruleManager.js"></script>
-
-<!-- ======================================================
-     Dictionaries
-====================================================== -->
 
 <script defer src="./js/engine/dictionaries/articles.js"></script>
 <script defer src="./js/engine/dictionaries/adjectives.js"></script>
@@ -480,10 +120,6 @@
 <script defer src="./js/engine/dictionaries/quantifiers.js"></script>
 <script defer src="./js/engine/dictionaries/uncountableNouns.js"></script>
 <script defer src="./js/engine/dictionaries/verbs.js"></script>
-
-<!-- ======================================================
-     Grammar Rules
-====================================================== -->
 
 <script defer src="./js/engine/rules/adjectiveRules.js"></script>
 <script defer src="./js/engine/rules/adverbRules.js"></script>
@@ -518,21 +154,20 @@
 <script defer src="./js/engine/rules/vocabularyRules.js"></script>
 <script defer src="./js/engine/rules/wordOrderRules.js"></script>
 
-<!-- ======================================================
-     Loader
-====================================================== -->
-
-<script defer src="./js/loader.js"></script>
-
-<!-- ======================================================
-     Application
-====================================================== -->
-
 <script defer src="./js/checker.js"></script>
 <script defer src="./js/dictionary.js"></script>
 <script defer src="./js/ui.js"></script>
 <script defer src="./js/app.js"></script>
 
-</body>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        try {
+            window.Loader.initialize();
+        } catch (err) {
+            console.error("Critical Start Error:", err);
+        }
+    });
+</script>
 
+</body>
 </html>
