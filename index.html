@@ -1,188 +1,538 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
+    <!-- ======================================================
+         Meta
+    ======================================================= -->
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <meta name="description" content="English-Bot is an AI-powered English learning assistant featuring grammar checking, dictionary, vocabulary, pronunciation and translation.">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
 
-    <title>English-Bot | AI English Learning Assistant</title>
+    <meta
+        name="description"
+        content="English-Bot is an AI-powered English learning assistant featuring grammar checking, dictionary, pronunciation, translation and vocabulary learning.">
 
-    <link rel="icon" href="./assets/ASI-logo.png"> <!-- ✅ استخدم شعار A.S.I كـ favicon -->
+    <meta
+        name="keywords"
+        content="English, Grammar, Dictionary, AI, Vocabulary, Translation">
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <meta
+        name="author"
+        content="A.S.I">
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <meta
+        name="theme-color"
+        content="#16a34a">
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <!-- ======================================================
+         Title
+    ======================================================= -->
 
-    <link rel="stylesheet" href="./css/style.css">
-    <link rel="stylesheet" href="./css/responsive.css">
-    <link rel="stylesheet" href="./css/themes.css">
+    <title>
+
+        English-Bot | AI English Learning Assistant
+
+    </title>
+
+    <!-- ======================================================
+         Favicon
+    ======================================================= -->
+
+    <link
+        rel="icon"
+        href="./assets/ASI-logo.png">
+
+    <!-- ======================================================
+         Fonts
+    ======================================================= -->
+
+    <link
+        rel="preconnect"
+        href="https://fonts.googleapis.com">
+
+    <link
+        rel="preconnect"
+        href="https://fonts.gstatic.com"
+        crossorigin>
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- ======================================================
+         Font Awesome
+    ======================================================= -->
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+    <!-- ======================================================
+         CSS
+    ======================================================= -->
+
+    <link
+        rel="stylesheet"
+        href="./css/style.css">
+
+    <link
+        rel="stylesheet"
+        href="./css/responsive.css">
+
+    <link
+        rel="stylesheet"
+        href="./css/themes.css">
+
 </head>
 
 <body>
 
 <div class="app">
+        <!-- ======================================================
+         Sidebar
+    ======================================================= -->
 
-    <!-- ================= SIDEBAR ================= -->
     <aside class="sidebar">
 
         <div class="logo">
-            <img src="./assets/ASI-logo.png" alt="A.S.I Logo" style="height:40px; margin-right:8px;"> <!-- ✅ اللوجو في أعلى الصفحة -->
+
+            <img
+                src="./assets/ASI-logo.png"
+                alt="English-Bot Logo">
+
             <div>
+
                 <h2>English-Bot</h2>
-                <small>AI Assistant</small>
+
+                <small>Powered by A.S.I</small>
+
             </div>
+
         </div>
 
         <nav class="menu">
-            <button class="nav-item active" data-page="home">
+
+            <button
+                class="nav-item active"
+                data-page="home">
+
                 <i class="fa-solid fa-house"></i>
+
                 <span>Home</span>
+
             </button>
-            <button class="nav-item" data-page="checker">
+
+            <button
+                class="nav-item"
+                data-page="checker">
+
                 <i class="fa-solid fa-spell-check"></i>
+
                 <span>Grammar Checker</span>
+
             </button>
-            <button class="nav-item" data-page="dictionary">
+
+            <button
+                class="nav-item"
+                data-page="dictionary">
+
                 <i class="fa-solid fa-book"></i>
+
                 <span>Dictionary</span>
+
             </button>
-            <button class="nav-item" data-page="vocabulary">
+
+            <button
+                class="nav-item"
+                data-page="vocabulary">
+
                 <i class="fa-solid fa-graduation-cap"></i>
+
                 <span>Vocabulary</span>
+
             </button>
-            <button class="nav-item" data-page="favorites">
+
+            <button
+                class="nav-item"
+                data-page="favorites">
+
                 <i class="fa-solid fa-heart"></i>
+
                 <span>Favorites</span>
+
             </button>
-            <button class="nav-item" data-page="history">
+
+            <button
+                class="nav-item"
+                data-page="history">
+
                 <i class="fa-solid fa-clock-rotate-left"></i>
+
                 <span>History</span>
+
             </button>
-            <button class="nav-item" data-page="settings">
+
+            <button
+                class="nav-item"
+                data-page="settings">
+
                 <i class="fa-solid fa-gear"></i>
+
                 <span>Settings</span>
+
             </button>
+
         </nav>
 
         <div class="sidebar-footer">
-            <small>Version 1.0</small>
+
+            <small>
+
+                Version 5.0
+
+            </small>
+
         </div>
 
     </aside>
 
-    <!-- ================= MAIN ================= -->
+    <!-- ======================================================
+         Main
+    ======================================================= -->
+
     <div class="main">
 
         <header class="header">
+
             <div class="header-left">
-                <h1 id="pageTitle">Home</h1>
-                <p>Improve your English every day.</p>
+
+                <h1 id="pageTitle">
+
+                    Home
+
+                </h1>
+
+                <p>
+
+                    Improve your English every day.
+
+                </p>
+
             </div>
+
             <div class="header-right">
-                <button class="icon-btn" id="menuBtn" aria-label="Menu">
+
+                <button
+                    class="icon-btn"
+                    id="menuBtn"
+                    aria-label="Menu">
+
                     <i class="fa-solid fa-bars"></i>
+
                 </button>
-                <button class="icon-btn" id="searchBtn" aria-label="Search">
+
+                <button
+                    class="icon-btn"
+                    id="searchBtn"
+                    aria-label="Search">
+
                     <i class="fa-solid fa-magnifying-glass"></i>
+
                 </button>
-                <button class="icon-btn" id="themeBtn" aria-label="Toggle Theme">
+
+                <button
+                    class="icon-btn"
+                    id="themeBtn"
+                    aria-label="Theme">
+
                     <i class="fa-solid fa-moon"></i>
+
                 </button>
+
             </div>
+
         </header>
 
-        <main id="content" role="main">
+        <!-- ======================================================
+             Content
+        ======================================================= -->
+
+        <main
+            id="content"
+            role="main">
+
             <section class="card hero">
-                <h2>Welcome to English-Bot 👋</h2>
-                <p>Your complete English learning assistant.</p>
+
+                <h2>
+
+                    Welcome to English-Bot 👋
+
+                </h2>
+
+                <p>
+
+                    Your complete AI English learning assistant.
+
+                </p>
+
             </section>
 
             <section class="dashboard">
+
                 <div class="card">
+
                     <i class="fa-solid fa-spell-check"></i>
-                    <h3>Grammar Checker</h3>
-                    <p>Correct grammar and spelling mistakes.</p>
+
+                    <h3>
+
+                        Grammar Checker
+
+                    </h3>
+
+                    <p>
+
+                        Correct grammar with an advanced AI engine.
+
+                    </p>
+
                 </div>
+
                 <div class="card">
+
                     <i class="fa-solid fa-book"></i>
-                    <h3>Dictionary</h3>
-                    <p>Definitions, pronunciation and examples.</p>
+
+                    <h3>
+
+                        Dictionary
+
+                    </h3>
+
+                    <p>
+
+                        Definitions, pronunciation and examples.
+
+                    </p>
+
                 </div>
+
                 <div class="card">
+
                     <i class="fa-solid fa-graduation-cap"></i>
-                    <h3>Vocabulary</h3>
-                    <p>Learn advanced English words.</p>
+
+                    <h3>
+
+                        Vocabulary
+
+                    </h3>
+
+                    <p>
+
+                        Learn thousands of English words.
+
+                    </p>
+
                 </div>
+
                 <div class="card">
+
                     <i class="fa-solid fa-chart-line"></i>
-                    <h3>Progress</h3>
-                    <p>Track your learning journey.</p>
+
+                    <h3>
+
+                        Progress
+
+                    </h3>
+
+                    <p>
+
+                        Track your learning journey.
+
+                    </p>
+
                 </div>
+
             </section>
+                        </section>
+
         </main>
 
-        <footer style="text-align:center; margin-top:20px; font-size:14px; color:#555;">
-            © 2026 English-Bot <br>
-            Powered by A.S.I
+        <!-- ======================================================
+             Footer
+        ======================================================= -->
+
+        <footer class="footer">
+
+            <p>
+
+                © 2026 English-Bot
+
+            </p>
+
+            <p>
+
+                Powered by A.S.I
+
+            </p>
+
         </footer>
 
     </div>
 
 </div>
 
-<!-- 🔥 NEW: Overlay for Mobile Sidebar -->
-<div class="overlay"></div>
+<!-- ======================================================
+     Mobile Overlay
+======================================================= -->
 
-<!-- UI Utilities -->
-<div id="toast"></div>
-<div id="modalContainer"></div>
-
-<div id="loader" class="hidden" role="status">
-    <div class="loader"></div>
+<div
+    class="overlay"
+    id="overlay">
 </div>
 
-<!-- Scripts -->
-<script src="./js/utils.js"></script>
-<script src="./js/storage.js"></script>
-<script src="./js/speech.js"></script>
-<script src="./js/api.js"></script>
+<!-- ======================================================
+     Toast
+======================================================= -->
 
-<!-- Grammar Engine Core -->
-<script src="./js/engine/engine.js"></script>
-<script src="./js/engine/ruleManager.js"></script>
+<div
+    id="toast"
+    class="toast">
+</div>
 
-<!-- Grammar Rules -->
-<script src="./js/engine/dictionaries/rules/adjectiveRules.js"></script>
-<script src="./js/engine/dictionaries/rules/adverbRules.js"></script>
-<script src="./js/engine/dictionaries/rules/agreementRules.js"></script>
-<script src="./js/engine/dictionaries/rules/articleRules.js"></script>
-<script src="./js/engine/dictionaries/rules/conjunctionRules.js"></script>
-<script src="./js/engine/dictionaries/rules/contractionRules.js"></script>
-<script src="./js/engine/dictionaries/rules/determinerRules.js"></script>
-<script src="./js/engine/dictionaries/rules/interjectionRules.js"></script>
-<script src="./js/engine/dictionaries/rules/capitalizationRules.js"></script>
-<script src="./js/engine/dictionaries/rules/collocationRules.js"></script>
-<script src="./js/engine/dictionaries/rules/comparisonRules.js"></script>
-<script src="./js/engine/dictionaries/rules/conditionalRules.js"></script>
-<script src="./js/engine/dictionaries/rules/countableRules.js"></script>
-<script src="./js/engine/dictionaries/rules/gerundRules.js"></script>
-<script src="./js/engine/dictionaries/rules/idiomRules.js"></script>
-<script src="./js/engine/dictionaries/rules/infinitiveRules.js"></script>
-<script src="./js/engine/dictionaries/rules/modalRules.js"></script>
-<script src="./js/engine/dictionaries/rules/pluralRules.js"></script>
-<script src="./js/engine/dictionaries/rules/prepositionRules.js"></script>
-<script src="./js/engine/dictionaries/rules/pronounRules.js"></script>
-<script src="./js/engine/dictionaries/rules/tenseRules.js"></script>
+<!-- ======================================================
+     Modal
+======================================================= -->
 
-<!-- App Logic -->
-<script src="./js/checker.js"></script>
-<script src="./js/dictionary.js"></script>
-<script src="./js/ui.js"></script>
-<script src="./js/app.js"></script>
+<div
+    id="modalContainer">
+</div>
+
+<!-- ======================================================
+     Loader
+======================================================= -->
+
+<div
+    id="loader"
+    class="hidden"
+    role="status"
+    aria-live="polite">
+
+    <div class="loader-spinner"></div>
+
+    <span>
+
+        Loading...
+
+    </span>
+
+</div>
+
+<!-- ======================================================
+     JavaScript Files
+======================================================= -->
+    <!-- ======================================================
+     Utilities
+====================================================== -->
+
+<script defer src="./js/utils.js"></script>
+<script defer src="./js/storage.js"></script>
+<script defer src="./js/speech.js"></script>
+<script defer src="./js/api.js"></script>
+
+<!-- ======================================================
+     Grammar Engine Core
+====================================================== -->
+
+<script defer src="./js/engine/engine.js"></script>
+<script defer src="./js/engine/grammar.js"></script>
+
+<script defer src="./js/engine/tokenizer.js"></script>
+<script defer src="./js/engine/analyzer.js"></script>
+<script defer src="./js/engine/corrector.js"></script>
+
+<script defer src="./js/engine/ruleManager.js"></script>
+
+<!-- ======================================================
+     Dictionaries
+====================================================== -->
+
+<script defer src="./js/engine/dictionaries/articles.js"></script>
+<script defer src="./js/engine/dictionaries/adjectives.js"></script>
+<script defer src="./js/engine/dictionaries/adverbs.js"></script>
+<script defer src="./js/engine/dictionaries/auxiliaryVerbs.js"></script>
+<script defer src="./js/engine/dictionaries/collocations.js"></script>
+<script defer src="./js/engine/dictionaries/conjunctions.js"></script>
+<script defer src="./js/engine/dictionaries/contractions.js"></script>
+<script defer src="./js/engine/dictionaries/determiners.js"></script>
+<script defer src="./js/engine/dictionaries/interjections.js"></script>
+<script defer src="./js/engine/dictionaries/irregularVerbs.js"></script>
+<script defer src="./js/engine/dictionaries/modalVerbs.js"></script>
+<script defer src="./js/engine/dictionaries/nouns.js"></script>
+<script defer src="./js/engine/dictionaries/participles.js"></script>
+<script defer src="./js/engine/dictionaries/phrasalVerbs.js"></script>
+<script defer src="./js/engine/dictionaries/pluralNouns.js"></script>
+<script defer src="./js/engine/dictionaries/prepositions.js"></script>
+<script defer src="./js/engine/dictionaries/pronouns.js"></script>
+<script defer src="./js/engine/dictionaries/quantifiers.js"></script>
+<script defer src="./js/engine/dictionaries/uncountableNouns.js"></script>
+<script defer src="./js/engine/dictionaries/verbs.js"></script>
+
+<!-- ======================================================
+     Grammar Rules
+====================================================== -->
+
+<script defer src="./js/engine/rules/adjectiveRules.js"></script>
+<script defer src="./js/engine/rules/adverbRules.js"></script>
+<script defer src="./js/engine/rules/agreementRules.js"></script>
+<script defer src="./js/engine/rules/articleRules.js"></script>
+<script defer src="./js/engine/rules/auxiliaryRules.js"></script>
+<script defer src="./js/engine/rules/capitalizationRules.js"></script>
+<script defer src="./js/engine/rules/collocationRules.js"></script>
+<script defer src="./js/engine/rules/comparisonRules.js"></script>
+<script defer src="./js/engine/rules/conconditionalRules.js"></script>
+<script defer src="./js/engine/rules/conjunctionRules.js"></script>
+<script defer src="./js/engine/rules/contractionRules.js"></script>
+<script defer src="./js/engine/rules/countableRules.js"></script>
+<script defer src="./js/engine/rules/determinerRules.js"></script>
+<script defer src="./js/engine/rules/gerundRules.js"></script>
+<script defer src="./js/engine/rules/idiomRules.js"></script>
+<script defer src="./js/engine/rules/infinitiveRules.js"></script>
+<script defer src="./js/engine/rules/interjectionRules.js"></script>
+<script defer src="./js/engine/rules/irregularVerbRules.js"></script>
+<script defer src="./js/engine/rules/modalRules.js"></script>
+<script defer src="./js/engine/rules/negativeRules.js"></script>
+<script defer src="./js/engine/rules/passiveRules.js"></script>
+<script defer src="./js/engine/rules/participleRules.js"></script>
+<script defer src="./js/engine/rules/pluralRules.js"></script>
+<script defer src="./js/engine/rules/prepositionRules.js"></script>
+<script defer src="./js/engine/rules/pronounRules.js"></script>
+<script defer src="./js/engine/rules/punctuationRules.js"></script>
+<script defer src="./js/engine/rules/questionRules.js"></script>
+<script defer src="./js/engine/rules/reportedSpeechRules.js"></script>
+<script defer src="./js/engine/rules/spellingRules.js"></script>
+<script defer src="./js/engine/rules/tenseRules.js"></script>
+<script defer src="./js/engine/rules/vocabularyRules.js"></script>
+<script defer src="./js/engine/rules/wordOrderRules.js"></script>
+
+<!-- ======================================================
+     Loader
+====================================================== -->
+
+<script defer src="./js/loader.js"></script>
+
+<!-- ======================================================
+     Application
+====================================================== -->
+
+<script defer src="./js/checker.js"></script>
+<script defer src="./js/dictionary.js"></script>
+<script defer src="./js/ui.js"></script>
+<script defer src="./js/app.js"></script>
 
 </body>
+
 </html>
