@@ -3,8 +3,7 @@
 /* ==========================================================
    English-Bot
    Grammar Engine
-   engine.js
-   Version 5.2 (Fully Fixed Integration)
+   Version 5.2 (FIXED ARCHITECTURE)
 ========================================================== */
 
 const GrammarEngine = (() => {
@@ -33,7 +32,6 @@ const GrammarEngine = (() => {
     function registerDictionary(name, dictionary) {
         dictionaries[name] = dictionary;
         statistics.loadedDictionaries++;
-        console.log(`[GrammarEngine] Dictionary registered: ${name}`);
     }
 
     function getDictionary(name) {
@@ -45,15 +43,12 @@ const GrammarEngine = (() => {
     ====================================================== */
     function registerManager(name, manager) {
         managers[name] = manager;
-        console.log(`[GrammarEngine] Manager registered: ${name}`);
     }
 
     /* ======================================================
-       Register Rule (FIXED)
+       FIXED: Register Rule
     ====================================================== */
     function registerRule(rule) {
-
-        if (!rule) return;
 
         const manager = managers.ruleManager;
 
@@ -61,6 +56,8 @@ const GrammarEngine = (() => {
             console.warn("[GrammarEngine] RuleManager not ready");
             return;
         }
+
+        if (!rule) return;
 
         try {
 
@@ -81,21 +78,19 @@ const GrammarEngine = (() => {
                     }))
                 });
 
-            manager.register(grammarRule);
+            // 🔥 IMPORTANT FIX: use add() not register()
+            manager.add(grammarRule);
+
             statistics.loadedRules++;
 
         } catch (err) {
-            console.error("[GrammarEngine registerRule Error]", err);
+            console.error("[registerRule Error]", err);
         }
     }
 
-    /* ======================================================
-       Register Rules (FIXED)
-    ====================================================== */
     function registerRules(rulesArray) {
-
         if (!Array.isArray(rulesArray)) {
-            console.error("[GrammarEngine] registerRules expects Array");
+            console.error("[GrammarEngine] registerRules expects an Array.");
             return;
         }
 
@@ -115,14 +110,13 @@ const GrammarEngine = (() => {
         if (!managers.corrector) throw new Error("Corrector not loaded.");
 
         initialized = true;
-        console.log("[GrammarEngine] Initialized successfully.");
+        console.log("[GrammarEngine] Initialized");
     }
 
     /* ======================================================
        Analyze
     ====================================================== */
     function analyze(text) {
-
         const tokens = managers.tokenizer.tokenize(text);
         return managers.analyzer.analyze(tokens);
     }
@@ -132,15 +126,8 @@ const GrammarEngine = (() => {
     ====================================================== */
     function correct(text) {
 
-        if (!text || text.trim() === "") {
-            return {
-                text: "",
-                issues: [],
-                suggestions: [],
-                report: {},
-                evaluation: {},
-                helper: {}
-            };
+        if (!text || !text.trim()) {
+            return { text: "", issues: [], suggestions: [], report: {}, evaluation: {}, helper: {} };
         }
 
         try {
@@ -167,16 +154,16 @@ const GrammarEngine = (() => {
                 helper
             };
 
-        } catch (error) {
+        } catch (e) {
 
-            console.error("[GrammarEngine ERROR]", error);
+            console.error("[GrammarEngine Error]", e);
 
             return {
                 text,
                 issues: [],
                 suggestions: [],
                 error: true,
-                message: error.message,
+                message: e.message,
                 evaluation: {},
                 helper: {}
             };
@@ -184,14 +171,11 @@ const GrammarEngine = (() => {
     }
 
     /* ======================================================
-       Statistics
+       Statistics (FIXED)
     ====================================================== */
     function getStatistics() {
 
-        if (
-            managers.ruleManager &&
-            typeof managers.ruleManager.getRules === "function"
-        ) {
+        if (managers.ruleManager?.getRules) {
             statistics.loadedRules = managers.ruleManager.getRules().length;
         }
 
