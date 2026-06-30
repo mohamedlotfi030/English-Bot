@@ -3,84 +3,203 @@
 /* ==========================================================
    English-Bot
    Pronoun Rules
-   Version 5.0
+   Version 6.0
 ========================================================== */
 
 const pronounRules = [];
 
 /* ==========================================================
-   Rule Registration
+   Helper
 ========================================================== */
 
-function addPronounRule({
-    description,
-    condition,
-    correction
-}) {
-    pronounRules.push({
-        description,
-        condition,
-        correction
-    });
+function addPronounRule(rule) {
+    pronounRules.push(rule);
 }
 
 /* ==========================================================
-   Subject Pronouns
+   Me -> I
 ========================================================== */
 
 addPronounRule({
-    description: "Use subject pronouns (I, you, he, she, it, we, they) before verbs",
-    condition: (word, context) => context.isSubject && !word.isSubjectPronoun,
-    correction: (word) => word.toSubjectPronoun()
+
+    id: "pronoun_me_i",
+
+    name: "Use I as subject",
+
+    category: GrammarCategory.PRONOUN,
+
+    description: "Use 'I' instead of 'me' as the subject.",
+
+    priority: 10,
+
+    test(sentence) {
+        return /^me\s+/i.test(sentence);
+    },
+
+    fix(sentence) {
+
+        return {
+
+            text: sentence.replace(/^me\b/i, "I"),
+
+            issue: true,
+
+            reason: "'I' should be used as the subject."
+
+        };
+
+    }
+
 });
 
 /* ==========================================================
-   Object Pronouns
+   Him -> He
 ========================================================== */
 
 addPronounRule({
-    description: "Use object pronouns (me, you, him, her, it, us, them) after verbs or prepositions",
-    condition: (word, context) => context.isObject && !word.isObjectPronoun,
-    correction: (word) => word.toObjectPronoun()
+
+    id: "pronoun_him_he",
+
+    name: "Use He as subject",
+
+    category: GrammarCategory.PRONOUN,
+
+    description: "Use 'He' instead of 'Him' as the subject.",
+
+    priority: 20,
+
+    test(sentence) {
+        return /^him\s+/i.test(sentence);
+    },
+
+    fix(sentence) {
+
+        return {
+
+            text: sentence.replace(/^him\b/i, "He"),
+
+            issue: true,
+
+            reason: "'He' should be used as the subject."
+
+        };
+
+    }
+
 });
 
 /* ==========================================================
-   Possessive Pronouns
+   Her -> She
 ========================================================== */
 
 addPronounRule({
-    description: "Use possessive pronouns (mine, yours, his, hers, ours, theirs) correctly",
-    condition: (word, context) => context.isPossessive && !word.isPossessivePronoun,
-    correction: (word) => word.toPossessivePronoun()
+
+    id: "pronoun_her_she",
+
+    name: "Use She as subject",
+
+    category: GrammarCategory.PRONOUN,
+
+    description: "Use 'She' instead of 'Her' as the subject.",
+
+    priority: 30,
+
+    test(sentence) {
+        return /^her\s+/i.test(sentence);
+    },
+
+    fix(sentence) {
+
+        return {
+
+            text: sentence.replace(/^her\b/i, "She"),
+
+            issue: true,
+
+            reason: "'She' should be used as the subject."
+
+        };
+
+    }
+
 });
 
 /* ==========================================================
-   Reflexive Pronouns
+   Us -> We
 ========================================================== */
 
 addPronounRule({
-    description: "Use reflexive pronouns (myself, yourself, himself, herself, itself, ourselves, themselves) after reflexive verbs",
-    condition: (word, context) => context.isReflexive && !word.isReflexivePronoun,
-    correction: (word) => word.toReflexivePronoun()
+
+    id: "pronoun_us_we",
+
+    name: "Use We as subject",
+
+    category: GrammarCategory.PRONOUN,
+
+    description: "Use 'We' instead of 'Us' as the subject.",
+
+    priority: 40,
+
+    test(sentence) {
+        return /^us\s+/i.test(sentence);
+    },
+
+    fix(sentence) {
+
+        return {
+
+            text: sentence.replace(/^us\b/i, "We"),
+
+            issue: true,
+
+            reason: "'We' should be used as the subject."
+
+        };
+
+    }
+
 });
 
 /* ==========================================================
-   Consistency Check
+   Them -> They
 ========================================================== */
 
 addPronounRule({
-    description: "Ensure pronoun agrees with antecedent in number and gender",
-    condition: (sentence, context) => context.hasPronounMismatch,
-    correction: (sentence) => sentence.fixPronounAgreement()
+
+    id: "pronoun_them_they",
+
+    name: "Use They as subject",
+
+    category: GrammarCategory.PRONOUN,
+
+    description: "Use 'They' instead of 'Them' as the subject.",
+
+    priority: 50,
+
+    test(sentence) {
+        return /^them\s+/i.test(sentence);
+    },
+
+    fix(sentence) {
+
+        return {
+
+            text: sentence.replace(/^them\b/i, "They"),
+
+            issue: true,
+
+            reason: "'They' should be used as the subject."
+
+        };
+
+    }
+
 });
 
 /* ==========================================================
    Register Rules
 ========================================================== */
 
-GrammarEngine.registerRules(
-    "pronounRules",
-    pronounRules
-);
+GrammarEngine.registerRules(pronounRules);
 
 window.pronounRules = pronounRules;
