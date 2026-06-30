@@ -3,7 +3,7 @@
 /* ==========================================================
    English-Bot
    Grammar Framework
-   Version 5.0
+   Version 5.1
 ========================================================== */
 
 /* ==========================================================
@@ -76,6 +76,7 @@ class GrammarRule {
         this.fix = fix;
     }
 }
+
 /* ==========================================================
    Grammar Correction Object
 ========================================================== */
@@ -97,31 +98,6 @@ class GrammarCorrection {
 }
 
 /* ==========================================================
-   Grammar Engine Registration
-========================================================== */
-
-const GrammarEngine = {
-    dictionaries: new Map(),
-    managers: new Map(),
-
-    registerDictionary(name, dict) {
-        this.dictionaries.set(name, dict);
-    },
-
-    getDictionary(name) {
-        return this.dictionaries.get(name);
-    },
-
-    registerManager(name, manager) {
-        this.managers.set(name, manager);
-    },
-
-    getManager(name) {
-        return this.managers.get(name);
-    }
-};
-
-/* ==========================================================
    Export
 ========================================================== */
 
@@ -129,4 +105,3 @@ window.GrammarCategory = GrammarCategory;
 window.GrammarSeverity = GrammarSeverity;
 window.GrammarRule = GrammarRule;
 window.GrammarCorrection = GrammarCorrection;
-window.GrammarEngine = GrammarEngine;
