@@ -2,176 +2,159 @@
 
 /* ==========================================================
    English-Bot
-   Corrector
-   Version 6.0
+   Corrector Engine
+   Version 7.0
 ========================================================== */
 
 class Corrector {
 
     constructor() {
-        this.corrections = [];
+        this.lastResult = null;
     }
 
     /* ======================================================
-       Correct Sentence
+       MAIN CORRECTION PIPELINE
     ====================================================== */
 
-    correct(text, analysis, tokens = []) {
+    correct(text, analysis = {}, tokens = []) {
 
-        this.corrections = [];
+        const engine = window.GrammarEngine;
 
-        let result = {
-            text,
-            issues: [],
-            suggestions: [],
-            report: {},
-            evaluation: {}
-        };
-
-        if (
-            window.ruleManager &&
-            typeof window.ruleManager.execute === "function"
-        ) {
-
-            result = window.ruleManager.execute(
-                text,
-                analysis,
-                tokens
-            );
-
+        if (!engine) {
+            console.warn("[Corrector] GrammarEngine not found.");
+            return this.fallback(text);
         }
 
-        this.corrections = result.issues || [];
+        const rules = engine.getAllRules?.() || [];
 
-        return {
+        let issues = [];
+        let correctedText = text;
 
-            text: result.text || text,
+        /* Sort by priority (important in v7) */
+        const sortedRules = [...rules].sort(
+            (a, b) => (a.priority || 0) - (b.priority || 0)
+        );
 
-            original: text,
+        for (const rule of sortedRules) {
 
-            corrected: result.text || text,
+            try {
 
-            issues: result.issues || [],
+                if (rule.test && rule.test(correctedText, analysis)) {
 
-            suggestions: result.suggestions || [],
+                    const before = correctedText;
 
-            report: result.report || {},
+                    if (rule.fix) {
+                        correctedText = rule.fix(correctedText, analysis, tokens);
+                    }
 
-            evaluation: result.evaluation || {},
+                    if (before !== correctedText) {
 
-            statistics: this.generateStatistics(
-                result.issues || []
-            )
+                        issues.push({
+                            rule: rule.id,
+                            description: rule.description,
+                            type: rule.type || "general",
+                            before,
+                            after: correctedText
+                        });
 
-        };
+                    }
+                }
 
-    }
-
-    /* ======================================================
-       Statistics
-    ====================================================== */
-
-    generateStatistics(issues) {
-
-        const stats = {
-
-            grammar: 0,
-
-            vocabulary: 0,
-
-            punctuation: 0,
-
-            style: 0,
-
-            total: issues.length
-
-        };
-
-        for (const issue of issues) {
-
-            switch (issue.category) {
-
-                case GrammarCategory.GRAMMAR:
-                    stats.grammar++;
-                    break;
-
-                case GrammarCategory.VOCABULARY:
-                    stats.vocabulary++;
-                    break;
-
-                case GrammarCategory.PUNCTUATION:
-                    stats.punctuation++;
-                    break;
-
-                case GrammarCategory.STYLE:
-                    stats.style++;
-                    break;
-
+            } catch (err) {
+                console.warn("[Rule Error]", rule.id, err);
             }
-
         }
 
-        return stats;
+        const result = {
+            text: correctedText,
+            original: text,
+            issues,
+            suggestions: this.buildSuggestions(issues),
+            report: this.buildReport(issues),
+            evaluation: this.evaluate(issues)
+        };
 
+        this.lastResult = result;
+
+        return result;
+    }
+
+    /* ======================================================
+       Suggestions Builder
+    ====================================================== */
+
+    buildSuggestions(issues) {
+        return issues.map(i => ({
+            rule: i.rule,
+            fix: i.after
+        }));
     }
 
     /* ======================================================
        Report
     ====================================================== */
 
-    generateReport(stats) {
+    buildReport(issues) {
 
-        const total =
-            Math.max(stats.total, 1);
-
-        return {
-
-            grammarPercent:
-                ((stats.grammar / total) * 100).toFixed(1) + "%",
-
-            vocabularyPercent:
-                ((stats.vocabulary / total) * 100).toFixed(1) + "%",
-
-            punctuationPercent:
-                ((stats.punctuation / total) * 100).toFixed(1) + "%",
-
-            stylePercent:
-                ((stats.style / total) * 100).toFixed(1) + "%",
-
-            overallScore:
-                Math.max(
-                    100 - stats.total * 5,
-                    0
-                ) + "%"
-
+        const types = {
+            grammar: 0,
+            vocabulary: 0,
+            punctuation: 0,
+            style: 0,
+            word_order: 0,
+            tense: 0
         };
 
+        for (const issue of issues) {
+            if (types[issue.type] !== undefined) {
+                types[issue.type]++;
+            }
+        }
+
+        const total = Math.max(issues.length, 1);
+
+        return {
+            grammarPercent: ((types.grammar / total) * 100).toFixed(1) + "%",
+            vocabularyPercent: ((types.vocabulary / total) * 100).toFixed(1) + "%",
+            punctuationPercent: ((types.punctuation / total) * 100).toFixed(1) + "%",
+            stylePercent: ((types.style / total) * 100).toFixed(1) + "%",
+            wordOrderPercent: ((types.word_order / total) * 100).toFixed(1) + "%",
+            tensePercent: ((types.tense / total) * 100).toFixed(1) + "%",
+            totalIssues: issues.length
+        };
     }
 
     /* ======================================================
-       Alternatives
+       Evaluation Score
     ====================================================== */
 
-    getAlternativeCorrections(suggestions) {
-
-        const alternatives = [];
-
-        for (const suggestion of suggestions) {
-
-            if (Array.isArray(suggestion.options)) {
-
-                alternatives.push(
-                    ...suggestion.options
-                );
-
-            }
-
-        }
-
-        return alternatives;
-
+    evaluate(issues) {
+        return {
+            score: Math.max(100 - issues.length * 5, 0),
+            level:
+                issues.length === 0 ? "Excellent" :
+                issues.length < 3 ? "Good" :
+                issues.length < 6 ? "Fair" : "Weak"
+        };
     }
 
+    /* ======================================================
+       Fallback Mode
+    ====================================================== */
+
+    fallback(text) {
+        return {
+            text,
+            original: text,
+            issues: [],
+            suggestions: [],
+            report: {},
+            evaluation: {
+                score: 0,
+                level: "No Engine"
+            }
+        };
+    }
 }
 
 /* ==========================================================
@@ -181,27 +164,4 @@ class Corrector {
 const corrector = new Corrector();
 
 window.corrector = corrector;
-
 window.Corrector = Corrector;
-
-/* ==========================================================
-   Register
-========================================================== */
-
-if (
-    window.GrammarEngine &&
-    typeof GrammarEngine.registerManager === "function"
-) {
-
-    GrammarEngine.registerManager(
-        "corrector",
-        corrector
-    );
-
-} else {
-
-    console.warn(
-        "[Corrector] GrammarEngine not found."
-    );
-
-}
