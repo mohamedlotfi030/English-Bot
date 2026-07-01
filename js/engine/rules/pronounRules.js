@@ -2,100 +2,82 @@
 
 /* ==========================================================
    English-Bot
-   Pronoun Rules (v7 - Analyzer Compatible)
+   Pronoun Rules v9 (Production Ready)
+   - Rule-based architecture
+   - Handles Subject/Object case agreement
 ========================================================== */
 
-class PronounRules {
+/**
+ * Rule: Subject Case Agreement
+ * Ensures pronouns used as subjects are in the subjective case.
+ */
+const subject_pronoun_rule = new GrammarRule({
+    id: "pronoun_subject_case",
+    name: "Subject Case Agreement",
+    category: GrammarCategory.PRONOUN,
+    severity: GrammarSeverity.ERROR,
+    priority: 15,
+    enabled: true,
 
-    apply(analysis) {
+    // خريطة التحويل (يمكن نقلها لـ RuleUtils.js)
+    subjectMap: {
+        "me": "I",
+        "him": "he",
+        "her": "she",
+        "us": "we",
+        "them": "they"
+    },
 
-        if (!analysis || !analysis.grammarSignals) return analysis;
+    test(text, analysis, tokens) {
+        const subject = analysis.subject?.toLowerCase();
+        return Object.keys(this.subjectMap).includes(subject);
+    },
 
-        this.fixSubjectPronouns(analysis);
-        this.fixObjectConfusion(analysis);
-        this.validatePronounRole(analysis);
-
-        return analysis;
+    fix(text, analysis, tokens) {
+        const wrong = analysis.subject.toLowerCase();
+        const correct = this.subjectMap[wrong];
+        const newText = text.replace(new RegExp(`\\b${wrong}\\b`, 'gi'), correct);
+        
+        return {
+            text: newText,
+            issue: true,
+            reason: `Use '${correct}' instead of '${wrong}' as the subject of the sentence.`
+        };
     }
+});
 
-    /* ======================================================
-       1. SUBJECT PRONOUN FIXES
-    ====================================================== */
+/**
+ * Rule: Object Case Agreement
+ * Validates that pronouns in object positions are in the objective case.
+ */
+const object_pronoun_rule = new GrammarRule({
+    id: "pronoun_object_case",
+    name: "Object Case Agreement",
+    category: GrammarCategory.PRONOUN,
+    severity: GrammarSeverity.ERROR,
+    priority: 15,
+    enabled: true,
 
-    fixSubjectPronouns(a) {
+    test(text, analysis, tokens) {
+        const validObjects = ["me", "him", "her", "us", "them", "you", "it"];
+        const obj = analysis.object?.toLowerCase();
+        return obj && !validObjects.includes(obj);
+    },
 
-        const subject = a.subject?.toLowerCase?.() || a.subject;
-
-        if (!subject) return;
-
-        switch (subject) {
-
-            case "me":
-                a.subject = "I";
-                a.grammarSignals.pronounIssue = true;
-                break;
-
-            case "him":
-                a.subject = "he";
-                a.grammarSignals.pronounIssue = true;
-                break;
-
-            case "her":
-                a.subject = "she";
-                a.grammarSignals.pronounIssue = true;
-                break;
-
-            case "us":
-                a.subject = "we";
-                a.grammarSignals.pronounIssue = true;
-                break;
-
-            case "them":
-                a.subject = "they";
-                a.grammarSignals.pronounIssue = true;
-                break;
-        }
+    fix(text, analysis, tokens) {
+        return {
+            text: text,
+            issue: true,
+            reason: "Invalid pronoun used in object position."
+        };
     }
-
-    /* ======================================================
-       2. OBJECT PRONOUN VALIDATION
-    ====================================================== */
-
-    fixObjectConfusion(a) {
-
-        const validObjectPronouns = [
-            "me","him","her","us","them","you","it"
-        ];
-
-        const obj = a.object?.toLowerCase?.() || a.object;
-
-        if (obj && !validObjectPronouns.includes(obj)) {
-            a.grammarSignals.pronounIssue = true;
-        }
-    }
-
-    /* ======================================================
-       3. ROLE VALIDATION (subject vs object confusion)
-    ====================================================== */
-
-    validatePronounRole(a) {
-
-        if (!a.subject || !a.verb) return;
-
-        const subject = a.subject.toLowerCase();
-
-        // invalid subject usage detection
-        const invalidSubjects = ["me","him","her","us","them"];
-
-        if (invalidSubjects.includes(subject)) {
-            a.grammarSignals.pronounIssue = true;
-            a.grammarSignals.sentenceIssue = true;
-        }
-    }
-}
+});
 
 /* ==========================================================
-   EXPORT
+   REGISTRATION
 ========================================================== */
 
-module.exports = PronounRules;
+GrammarEngine.registerRules([
+    subject_pronoun_rule,
+    object_pronoun_rule
+]);
