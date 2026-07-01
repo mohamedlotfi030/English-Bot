@@ -2,93 +2,73 @@
 
 /* ==========================================================
    English-Bot
-   Negative Rules v7
-   - Structural validation only
+   Negative Rules v9 (Production Ready)
+   - Rule-based architecture
+   - Handles Do-support and Double Negation
 ========================================================== */
 
-class NegativeRules {
+/**
+ * Rule: Do-Support for Negation
+ * Ensures 'do/does/did' are used for negations in simple tenses.
+ */
+const do_support_negation_rule = new GrammarRule({
+    id: "do_support_negation_rule",
+    name: "Do-Support Negation",
+    category: GrammarCategory.NEGATION,
+    severity: GrammarSeverity.ERROR,
+    priority: 20,
+    enabled: true,
 
-    apply(analysis) {
+    test(text, analysis, tokens) {
+        const hasNot = tokens.some(t => t.lower === "not");
+        const hasAux = analysis.auxiliaries && analysis.auxiliaries.length > 0;
+        
+        return hasNot && !hasAux && (analysis.tense === "present" || analysis.tense === "past");
+    },
 
-        if (!analysis || !analysis.grammarSignals) return analysis;
-
-        this.detectNegationIssues(analysis);
-
-        return analysis;
+    fix(text, analysis, tokens) {
+        const support = analysis.tense === "past" ? "did" : "do"; // تبسيط
+        return {
+            text: text,
+            issue: true,
+            reason: `Negation in simple tenses requires auxiliary 'do/does/did' (e.g., 'do not', 'did not').`
+        };
     }
+});
 
-    /* ======================================================
-       CORE NEGATION LOGIC
-    ====================================================== */
+/**
+ * Rule: Double Negation
+ * Identifies and flags double negative structures (e.g., "I don't know nothing").
+ */
+const double_negation_rule = new GrammarRule({
+    id: "double_negation_rule",
+    name: "Double Negation",
+    category: GrammarCategory.NEGATION,
+    severity: GrammarSeverity.WARNING,
+    priority: 25,
+    enabled: true,
 
-    detectNegationIssues(a) {
+    test(text, analysis, tokens) {
+        const negativeWords = ["not", "never", "no", "nothing", "nobody"];
+        const countNeg = tokens.filter(t => negativeWords.includes(t.lower)).length;
+        
+        return countNeg > 1;
+    },
 
-        const tokens = a.tokens.map(t => t.lower);
-
-        const hasNot = tokens.includes("not");
-
-        const subject = a.subject;
-
-        const tense = a.tense;
-
-        /* ==================================================
-           PRESENT SIMPLE DO-SUPPORT CHECK
-        ================================================== */
-
-        if (tense === "present" && !a.auxiliaries?.length) {
-
-            if (hasNot) {
-                a.grammarSignals.doSupportMissing = true;
-            }
-        }
-
-        /* ==================================================
-           PAST SIMPLE DO-SUPPORT CHECK
-        ================================================== */
-
-        if (tense === "past" && !a.auxiliaries?.length) {
-
-            if (hasNot) {
-                a.grammarSignals.didSupportMissing = true;
-            }
-        }
-
-        /* ==================================================
-           BE VERB NEGATION STRUCTURE
-        ================================================== */
-
-        if (a.verb?.base === "be" && hasNot) {
-            a.grammarSignals.beNegationDetected = true;
-        }
-
-        /* ==================================================
-           MODAL NEGATION STRUCTURE
-        ================================================== */
-
-        const modals = a.modals || [];
-
-        if (modals.length > 0 && hasNot) {
-            a.grammarSignals.modalNegationDetected = true;
-        }
-
-        /* ==================================================
-           DOUBLE NEGATION DETECTION
-        ================================================== */
-
-        const negativeWords = ["not","never","no","nothing","nobody"];
-
-        const countNeg = tokens.filter(t =>
-            negativeWords.includes(t)
-        ).length;
-
-        if (countNeg > 1) {
-            a.grammarSignals.doubleNegationWarning = true;
-        }
+    fix(text, analysis, tokens) {
+        return {
+            text: text,
+            issue: true,
+            reason: "Double negation is generally incorrect in English. Use only one negative per clause."
+        };
     }
-}
+});
 
 /* ==========================================================
-   EXPORT
+   REGISTRATION
 ========================================================== */
 
-module.exports = NegativeRules;
+GrammarEngine.registerRules([
+    do_support_negation_rule,
+    double_negation_rule
+]);
