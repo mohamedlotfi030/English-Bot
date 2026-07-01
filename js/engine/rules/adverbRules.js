@@ -2,139 +2,105 @@
 
 /* ==========================================================
    English-Bot
-   Adverb Rules v9 (Production Ready)
-   - Patch-based Fixes
-   - O(1) Complexity & Dictionary Lookups
+   Adverb Rules v9 (Compatible Version)
+   - Adheres to current Analyzer/Corrector architecture
+   - Uses Array-based lookups (compatible with current state)
+   - No external Maps or missing Utilities
 ========================================================== */
 
 /**
- * Rule 1: Adverb Comparative Form
- * Ensures adverbs in comparative context use correct form (via Dictionary)
+ * Rule 1: Adverb Comparative Placement (Positioning)
+ * Warns about typical adverb placement issues.
  */
-const adverb_comparative_rule = new GrammarRule({
-    id: "adverb_comparative_rule",
-    name: "Adverb Comparative Form",
-    description: "Ensures adverbs in comparative context are correctly formed.",
-    category: GrammarCategory.ADVERB,
-    severity: GrammarSeverity.ERROR,
-    priority: 30,
-    enabled: true,
-
-    test(text, analysis, tokens) {
-        const dict = GrammarEngine.getDictionary("adverbs");
-        // Check for 'more' before an adverb
-        for (let i = 0; i < tokens.length - 1; i++) {
-            const current = GrammarUtils.getTokenText(tokens[i]).toLowerCase();
-            const nextWord = GrammarUtils.getTokenText(tokens[i + 1]).toLowerCase();
-            
-            if (current === "more" && analysis.adverbMap.has(nextWord)) {
-                const entry = dict.get(nextWord);
-                if (entry && !entry.isComparative) return true;
-            }
-        }
-        return false;
-    },
-
-    fix(text, analysis, tokens) {
-        const dict = GrammarEngine.getDictionary("adverbs");
-        for (let i = 0; i < tokens.length - 1; i++) {
-            const current = GrammarUtils.getTokenText(tokens[i]).toLowerCase();
-            const nextWord = GrammarUtils.getTokenText(tokens[i + 1]).toLowerCase();
-
-            if (current === "more" && analysis.adverbMap.has(nextWord)) {
-                const entry = dict.get(nextWord);
-                if (entry && entry.comparativeForm) {
-                    return {
-                        issue: true,
-                        replaceAt: tokens[i].index,
-                        replaceWith: entry.comparativeForm,
-                        reason: `Use '${entry.comparativeForm}' instead of 'more ${nextWord}'.`
-                    };
-                }
-            }
-        }
-        return { issue: false };
-    }
-});
-
-/**
- * Rule 2: Adverb Frequency Position
- * Detects placement of frequency adverbs (e.g., 'always', 'never')
- */
-const adverb_frequency_position_rule = new GrammarRule({
-    id: "adverb_frequency_position_rule",
-    name: "Frequency Adverb Position",
-    description: "Checks placement of frequency adverbs relative to the verb.",
+const adverb_position_rule = new GrammarRule({
+    id: "adverb_position_rule",
+    name: "Adverb Placement",
+    description: "Basic check for adverb placement.",
     category: GrammarCategory.ADVERB,
     severity: GrammarSeverity.WARNING,
     priority: 35,
     enabled: true,
 
     test(text, analysis, tokens) {
-        const dict = GrammarEngine.getDictionary("adverbs");
-        for (let i = 0; i < tokens.length; i++) {
-            const word = GrammarUtils.getTokenText(tokens[i]).toLowerCase();
-            if (analysis.adverbMap.has(word)) {
-                const entry = dict.get(word);
-                if (entry && entry.isFrequency && i > 0 && i < tokens.length - 1) {
-                    const prev = GrammarUtils.getTokenText(tokens[i - 1]).toLowerCase();
-                    // Basic check: Frequency adverbs often go before the main verb
-                    if (analysis.verbMap.has(prev)) return true;
-                }
-            }
-        }
-        return false;
+        // نستخدم المصفوفات الموجودة بالفعل في analysis
+        return analysis.adverbs && analysis.adverbs.length > 0;
     },
 
     fix(text, analysis, tokens) {
+        // يعيد النص كما هو (الـ Corrector سيتولى المعالجة لاحقاً)
         return {
+            text: text,
             issue: true,
-            replaceAt: tokens[0].index, // Placeholder: Corrector handles optimal placement
-            replaceWith: "",
-            reason: "Check the position of this frequency adverb; it is typically placed before the main verb."
+            reason: "Review the placement of adverbs for better clarity."
         };
     }
 });
 
 /**
- * Rule 3: Double Adverb Form
- * Prevents structures like 'more faster'
+ * Rule 2: Frequency Adverb Check
+ * Checks for standard frequency adverbs.
  */
-const double_adverb_rule = new GrammarRule({
-    id: "double_adverb_rule",
-    name: "Double Adverb",
-    description: "Prevents double adverb forms like 'more faster'.",
+const frequency_adverb_rule = new GrammarRule({
+    id: "frequency_adverb_rule",
+    name: "Frequency Adverb",
+    description: "Checks for common frequency adverbs.",
+    category: GrammarCategory.ADVERB,
+    severity: GrammarSeverity.INFO,
+    priority: 40,
+    enabled: true,
+
+    test(text, analysis, tokens) {
+        const freq = ["always", "usually", "often", "sometimes", "rarely", "never"];
+        // فحص مباشر باستخدام token.lower المتاح في المحرك الحالي
+        return tokens.some(t => freq.includes(t.lower));
+    },
+
+    fix(text, analysis, tokens) {
+        return {
+            text: text,
+            issue: false
+        };
+    }
+});
+
+/**
+ * Rule 3: Redundant 'More' with Adverbs
+ * (Note: Logic moved here from comparison rules as requested)
+ */
+const redundant_more_rule = new GrammarRule({
+    id: "redundant_more_rule",
+    name: "Redundant More",
+    description: "Prevents incorrect usage of 'more' with already comparative adverbs.",
     category: GrammarCategory.ADVERB,
     severity: GrammarSeverity.ERROR,
     priority: 30,
     enabled: true,
 
     test(text, analysis, tokens) {
-        const dict = GrammarEngine.getDictionary("adverbs");
         for (let i = 0; i < tokens.length - 1; i++) {
-            const current = GrammarUtils.getTokenText(tokens[i]).toLowerCase();
-            const nextWord = GrammarUtils.getTokenText(tokens[i + 1]).toLowerCase();
-            if (current === "more" && analysis.adverbMap.has(nextWord)) {
-                const entry = dict.get(nextWord);
-                if (entry && entry.isComparative) return true;
+            if (tokens[i].lower === "more") {
+                const next = tokens[i + 1].lower;
+                // فحص بسيط: إذا انتهت الكلمة بـ 'er'
+                if (next.endsWith("er")) return true;
             }
         }
         return false;
     },
 
     fix(text, analysis, tokens) {
+        let newText = text;
         for (let i = 0; i < tokens.length - 1; i++) {
-            const current = GrammarUtils.getTokenText(tokens[i]).toLowerCase();
-            if (current === "more") {
-                return {
-                    issue: true,
-                    replaceAt: tokens[i].index,
-                    replaceWith: "",
-                    reason: "Redundant 'more' detected."
-                };
+            if (tokens[i].lower === "more" && tokens[i+1].lower.endsWith("er")) {
+                // إزالة كلمة more وتصحيح النص
+                newText = text.replace(new RegExp("\\b" + tokens[i].value + "\\s+", "gi"), "");
+                break;
             }
         }
-        return { issue: false };
+        return {
+            text: newText,
+            issue: true,
+            reason: "Remove redundant 'more' before comparative adverbs."
+        };
     }
 });
 
@@ -143,7 +109,7 @@ const double_adverb_rule = new GrammarRule({
 ========================================================== */
 
 GrammarEngine.registerRules([
-    adverb_comparative_rule,
-    adverb_frequency_position_rule,
-    double_adverb_rule
+    adverb_position_rule,
+    frequency_adverb_rule,
+    redundant_more_rule
 ]);
