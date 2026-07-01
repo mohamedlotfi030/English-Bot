@@ -2,89 +2,117 @@
 
 /* ==========================================================
    English-Bot
-   Determiner Rules
-   Version 5.0
+   Determiner Rules v7
+   - NP-level validation only
 ========================================================== */
 
-const determinerRules = [];
+class DeterminerRules {
 
-/* ==========================================================
-   Rule Registration
-========================================================== */
+    apply(analysis) {
 
-function addDeterminerRule({
-    description,
-    condition,
-    correction
-}) {
-    determinerRules.push({
-        description,
-        condition,
-        correction
-    });
+        if (!analysis || !analysis.grammarSignals) return analysis;
+
+        this.validateArticles(analysis);
+        this.validateDemonstratives(analysis);
+        this.validateQuantifiers(analysis);
+
+        return analysis;
+    }
+
+    /* ======================================================
+       1. ARTICLE VALIDATION
+    ====================================================== */
+
+    validateArticles(a) {
+
+        const articles = a.articles || [];
+        const nouns = a.nouns || [];
+
+        if (!articles.length || !nouns.length) return;
+
+        const article = articles[0].lower;
+        const noun = nouns[0].lower;
+
+        const startsWithVowel = /^[aeiou]/.test(noun);
+
+        if (article === "a" && startsWithVowel) {
+            a.grammarSignals.articleIssue = true;
+        }
+
+        if (article === "an" && !startsWithVowel) {
+            a.grammarSignals.articleIssue = true;
+        }
+    }
+
+    /* ======================================================
+       2. DEMONSTRATIVE VALIDATION (STRUCTURAL ONLY)
+    ====================================================== */
+
+    validateDemonstratives(a) {
+
+        const tokens = a.tokens.map(t => t.lower);
+
+        const hasThis = tokens.includes("this");
+        const hasThese = tokens.includes("these");
+
+        const nouns = a.nouns || [];
+
+        if (!nouns.length) return;
+
+        const isPlural = nouns.length > 1;
+
+        if (hasThis && isPlural) {
+            a.grammarSignals.determinerIssue = true;
+        }
+
+        if (hasThese && !isPlural) {
+            a.grammarSignals.determinerIssue = true;
+        }
+    }
+
+    /* ======================================================
+       3. QUANTIFIER VALIDATION (LIGHT WEIGHT)
+    ====================================================== */
+
+    validateQuantifiers(a) {
+
+        const tokens = a.tokens.map(t => t.lower);
+
+        const hasMuch = tokens.includes("much");
+        const hasMany = tokens.includes("many");
+
+        const nouns = a.nouns || [];
+
+        if (!nouns.length) return;
+
+        const isUncountable = this.isUncountable(nouns[0]);
+
+        if (hasMuch && !isUncountable) {
+            a.grammarSignals.countableIssue = true;
+        }
+
+        if (hasMany && isUncountable) {
+            a.grammarSignals.countableIssue = true;
+        }
+    }
+
+    /* ======================================================
+       MINIMAL LEXICON
+    ====================================================== */
+
+    isUncountable(noun) {
+
+        const list = [
+            "water","milk","rice","air",
+            "information","advice","money"
+        ];
+
+        return list.includes(noun.lower || noun);
+    }
 }
 
 /* ==========================================================
-   Demonstrative Determiners
+   EXPORT
 ========================================================== */
 
-addDeterminerRule({
-    description: "Use 'this/that' with singular nouns",
-    condition: (det, context) => context.type === "demonstrative" && context.isSingular && !["this","that"].includes(det.form),
-    correction: () => "this"
-});
-
-addDeterminerRule({
-    description: "Use 'these/those' with plural nouns",
-    condition: (det, context) => context.type === "demonstrative" && context.isPlural && !["these","those"].includes(det.form),
-    correction: () => "these"
-});
-
-/* ==========================================================
-   Quantitative Determiners
-========================================================== */
-
-addDeterminerRule({
-    description: "Use 'some' with positive plural/uncountable nouns",
-    condition: (det, context) => context.type === "quantitative" && context.isPositive && !["some"].includes(det.form),
-    correction: () => "some"
-});
-
-addDeterminerRule({
-    description: "Use 'any' with negatives or questions",
-    condition: (det, context) => context.type === "quantitative" && (context.isNegative || context.isQuestion) && det.form !== "any",
-    correction: () => "any"
-});
-
-addDeterminerRule({
-    description: "Use 'few/many' with countable nouns",
-    condition: (det, context) => context.type === "quantitative" && context.isCountable && !["few","many"].includes(det.form),
-    correction: () => "many"
-});
-
-addDeterminerRule({
-    description: "Use 'little/much' with uncountable nouns",
-    condition: (det, context) => context.type === "quantitative" && context.isUncountable && !["little","much"].includes(det.form),
-    correction: () => "much"
-});
-
-/* ==========================================================
-   Possessive Determiners
-========================================================== */
-
-addDeterminerRule({
-    description: "Use possessive determiners (my, your, his, her, our, their) before nouns",
-    condition: (det, context) => context.type === "possessive" && !det.isPossessive,
-    correction: () => "my"
-});
-
-/* ==========================================================
-   Register Rules
-========================================================== */
-
-GrammarEngine.registerRules(
-    "determinerRules",
-    determinerRules
-);
-
-window.determinerRules = determinerRules;
+module.exports = DeterminerRules;
