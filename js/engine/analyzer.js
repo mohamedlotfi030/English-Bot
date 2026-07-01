@@ -294,7 +294,36 @@ class Analyzer {
 }
 
 /* ==========================================================
-   EXPORT FIX (BROWSER SAFE)
+   CREATE INSTANCE
 ========================================================== */
 
+const analyzer = new Analyzer();
+
+/* ==========================================================
+   EXPORT
+========================================================== */
+
+window.analyzer = analyzer;
 window.Analyzer = Analyzer;
+
+/* ==========================================================
+   REGISTER TO GRAMMAR ENGINE
+========================================================== */
+
+if (
+    window.GrammarEngine &&
+    typeof window.GrammarEngine.registerManager === "function"
+) {
+
+    window.GrammarEngine.registerManager(
+        "analyzer",
+        analyzer
+    );
+
+    console.log("[Analyzer] Registered successfully.");
+
+} else {
+
+    console.warn("[Analyzer] GrammarEngine is not available.");
+
+}
