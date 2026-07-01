@@ -2,69 +2,47 @@
 
 /* ==========================================================
    English-Bot
-   Conjunction Rules v7
-   - Discourse-level signal detection only
+   Conjunction Rules v9 (Production Ready)
+   - Rule-based architecture
+   - Handles conjunction usage and sentence complexity
 ========================================================== */
 
-class ConjunctionRules {
+/**
+ * Rule: Conjunction Usage & Complexity
+ * Monitors conjunctions and flags overly complex sentence structures.
+ */
+const conjunction_rule = new GrammarRule({
+    id: "conjunction_rule",
+    name: "Conjunctions and Complexity",
+    category: GrammarCategory.CONJUNCTION,
+    severity: GrammarSeverity.INFO,
+    priority: 40,
+    enabled: true,
 
-    apply(analysis) {
+    test(text, analysis, tokens) {
+        const connectors = ["and", "but", "or", "because", "if"];
+        const tokenList = tokens.map(t => t.lower);
+        
+        // التحقق من وجود روابط معينة (يمكن توسيع هذا المنطق حسب الحاجة)
+        const conjunctionCount = connectors.filter(c => tokenList.includes(c)).length;
+        
+        // التحذير إذا كانت الجملة مركبة بشكل مفرط
+        return conjunctionCount > 2;
+    },
 
-        if (!analysis || !analysis.grammarSignals) return analysis;
-
-        this.detectBasicRelations(analysis);
-
-        return analysis;
+    fix(text, analysis, tokens) {
+        return {
+            text: text,
+            issue: true,
+            reason: "This sentence is quite complex; consider breaking it into shorter sentences for better readability."
+        };
     }
-
-    /* ======================================================
-       CORE DISCOURSE DETECTION
-    ====================================================== */
-
-    detectBasicRelations(a) {
-
-        const tokens = a.tokens.map(t => t.lower || t.toLower?.() || t);
-
-        const hasAnd = tokens.includes("and");
-        const hasBut = tokens.includes("but");
-        const hasOr = tokens.includes("or");
-        const hasBecause = tokens.includes("because");
-
-        const hasIf = tokens.includes("if");
-
-        /* ==================================================
-           SIMPLE RELATION SIGNALS
-        ================================================== */
-
-        if (hasBut) {
-            a.grammarSignals.conjunctionIssue = true;
-        }
-
-        if (hasBecause) {
-            a.grammarSignals.conjunctionIssue = true;
-        }
-
-        if (hasIf) {
-            a.grammarSignals.conjunctionIssue = true;
-        }
-
-        /* ==================================================
-           STRUCTURAL COMPLEXITY SIGNAL
-        ================================================== */
-
-        const conjunctionCount =
-            ["and","but","or","because","if"].filter(c =>
-                tokens.includes(c)
-            ).length;
-
-        if (conjunctionCount > 2) {
-            a.grammarSignals.complexSentence = true;
-        }
-    }
-}
+});
 
 /* ==========================================================
-   EXPORT
+   REGISTRATION
 ========================================================== */
 
-module.exports = ConjunctionRules;
+GrammarEngine.registerRules([
+    conjunction_rule
+]);
