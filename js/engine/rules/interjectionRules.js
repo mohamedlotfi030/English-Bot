@@ -2,63 +2,47 @@
 
 /* ==========================================================
    English-Bot
-   Interjection Signals v7
-   - Discourse/emotion detection only
+   Interjection Rules v9 (Production Ready)
+   - Rule-based architecture
+   - Discourse emotion and hesitation detection
 ========================================================== */
 
-class InterjectionRules {
+/**
+ * Rule: Interjection Detection
+ * Flags interjections and hesitation markers (um, uh).
+ */
+const interjection_rule = new GrammarRule({
+    id: "interjection_detection_rule",
+    name: "Interjection & Hesitation Detection",
+    category: GrammarCategory.LEXICAL,
+    severity: GrammarSeverity.INFO,
+    priority: 70, // أولوية منخفضة جداً
+    enabled: true,
 
-    apply(analysis) {
-
-        if (!analysis || !analysis.grammarSignals) return analysis;
-
-        this.detectInterjections(analysis);
-
-        return analysis;
-    }
-
-    /* ======================================================
-       DETECTION ONLY (NO CORRECTION)
-    ====================================================== */
-
-    detectInterjections(a) {
-
-        const tokens = a.tokens.map(t => t.lower);
-
+    test(text, analysis, tokens) {
         const knownInterjections = [
-            "oh","wow","oops",
-            "yay","hooray","bravo",
-            "ouch","ow","ugh",
-            "hey","hi","hello",
-            "um","uh","er"
+            "oh", "wow", "oops", "yay", "hooray", "bravo",
+            "ouch", "ow", "ugh", "hey", "hi", "hello", "um", "uh", "er"
         ];
+        
+        return tokens.some(t => knownInterjections.includes(t.lower));
+    },
 
-        const found = tokens.filter(t =>
-            knownInterjections.includes(t)
-        );
-
-        if (found.length > 0) {
-
-            a.grammarSignals.interjectionDetected = true;
-            a.grammarSignals.interjections = found;
-        }
-
-        /* ==================================================
-           DISCOURSE POSITION SIGNAL
-        ================================================== */
-
-        if (found.includes("um") || found.includes("uh")) {
-            a.grammarSignals.hesitationMarker = true;
-        }
-
-        if (found.includes("wow") || found.includes("oh")) {
-            a.grammarSignals.emphasisMarker = true;
-        }
+    fix(text, analysis, tokens) {
+        // لا نقوم بالتعديل التلقائي هنا لأنها تعبيرات اختيارية، 
+        // لكننا نقدم نصيحة للمستخدم في حال رغب في تنقيح النص (مثلاً لإزالة الحشو)
+        return {
+            text: text,
+            issue: true,
+            reason: "Interjections or filler words detected. Consider removing them if writing formally."
+        };
     }
-}
+});
 
 /* ==========================================================
-   EXPORT
+   REGISTRATION
 ========================================================== */
 
-module.exports = InterjectionRules;
+GrammarEngine.registerRules([
+    interjection_rule
+]);
