@@ -3,74 +3,95 @@
 /* ==========================================================
    English-Bot
    Word Order Rules
-   Version 5.0
+   Version 7.0
 ========================================================== */
 
 const wordOrderRules = [];
 
 /* ==========================================================
-   Rule Registration
+   Subject + Verb + Object (SVO)
 ========================================================== */
 
-function addWordOrderRule({
-    description,
-    condition,
-    correction
-}) {
-    wordOrderRules.push({
-        description,
-        condition,
-        correction
-    });
-}
+wordOrderRules.push({
+    id: "svo_order",
+    type: "word_order",
+    priority: 10,
 
-/* ==========================================================
-   Basic Sentence Order
-========================================================== */
-
-addWordOrderRule({
     description: "Ensure Subject + Verb + Object order in statements",
-    condition: (sentence, context) => context.type === "statement" && !sentence.isSVO,
-    correction: (sentence) => sentence.toSVO()
+
+    test(sentence, context) {
+        return context.type === "statement" && !context.isSVO;
+    },
+
+    fix(sentence) {
+        return sentence.toSVO?.() || sentence;
+    }
 });
 
 /* ==========================================================
-   Question Order
+   Question Inversion
 ========================================================== */
 
-addWordOrderRule({
+wordOrderRules.push({
+    id: "question_inversion",
+    type: "word_order",
+    priority: 20,
+
     description: "Invert subject and auxiliary in questions",
-    condition: (sentence, context) => context.type === "question" && !context.isInverted,
-    correction: (sentence) => sentence.invertSubjectAuxiliary()
+
+    test(sentence, context) {
+        return context.type === "question" && !context.isInverted;
+    },
+
+    fix(sentence) {
+        return sentence.invertSubjectAuxiliary?.() || sentence;
+    }
 });
 
 /* ==========================================================
    Adverb Placement
 ========================================================== */
 
-addWordOrderRule({
+wordOrderRules.push({
+    id: "adverb_placement",
+    type: "word_order",
+    priority: 30,
+
     description: "Place frequency adverbs before main verb but after auxiliary",
-    condition: (sentence, context) => context.hasFrequencyAdverb && !sentence.isCorrectAdverbPlacement,
-    correction: (sentence) => sentence.fixAdverbPlacement()
+
+    test(sentence, context) {
+        return context.hasFrequencyAdverb && !context.isCorrectAdverbPlacement;
+    },
+
+    fix(sentence) {
+        return sentence.fixAdverbPlacement?.() || sentence;
+    }
 });
 
 /* ==========================================================
    Negative Placement
 ========================================================== */
 
-addWordOrderRule({
+wordOrderRules.push({
+    id: "negative_placement",
+    type: "word_order",
+    priority: 40,
+
     description: "Place 'not' after auxiliary verb",
-    condition: (sentence, context) => context.isNegative && !sentence.hasNotAfterAuxiliary,
-    correction: (sentence) => sentence.fixNegativePlacement()
+
+    test(sentence, context) {
+        return context.isNegative && !context.hasNotAfterAuxiliary;
+    },
+
+    fix(sentence) {
+        return sentence.fixNegativePlacement?.() || sentence;
+    }
 });
 
 /* ==========================================================
-   Register Rules
+   REGISTER
 ========================================================== */
 
-GrammarEngine.registerRules(
-    "wordOrderRules",
-    wordOrderRules
-);
+GrammarEngine.registerRules("word_order", wordOrderRules);
 
 window.wordOrderRules = wordOrderRules;
