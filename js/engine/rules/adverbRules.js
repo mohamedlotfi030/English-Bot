@@ -2,73 +2,125 @@
 
 /* ==========================================================
    English-Bot
-   Adverb Rules
-   Version 5.0
+   Adverb Rules v7
+   - Signal-based architecture
 ========================================================== */
 
-const adverbRules = [];
+class AdverbRules {
 
-/* ==========================================================
-   Rule Registration
-========================================================== */
+    apply(analysis) {
 
-function addAdverbRule({
-    description,
-    condition,
-    correction
-}) {
-    adverbRules.push({
-        description,
-        condition,
-        correction
-    });
+        if (!analysis || !analysis.grammarSignals) return analysis;
+
+        this.validatePositionIssues(analysis);
+        this.validateFrequencyAdverbs(analysis);
+        this.validateTimeAdverbs(analysis);
+        this.validateDegreeForms(analysis);
+
+        return analysis;
+    }
+
+    /* ======================================================
+       1. POSITION VALIDATION
+    ====================================================== */
+
+    validatePositionIssues(a) {
+
+        if (!a.adverbs || a.adverbs.length === 0) return;
+
+        const adverbs = a.adverbs.map(x => x.lower || x.toLower?.() || x);
+
+        for (const adv of adverbs) {
+
+            // naive position heuristic replaced with signal
+            if (adv) {
+                a.grammarSignals.adverbIssue = true;
+            }
+        }
+    }
+
+    /* ======================================================
+       2. FREQUENCY ADVERBS
+    ====================================================== */
+
+    validateFrequencyAdverbs(a) {
+
+        const frequency = [
+            "always","usually","often","sometimes","rarely","never"
+        ];
+
+        const tokens = a.tokens.map(t => t.lower || t.toLower?.());
+
+        const hasFrequency = tokens.some(t => frequency.includes(t));
+
+        if (!hasFrequency) return;
+
+        // rely on structure instead of position guessing
+        if (!a.subject || !a.verb) {
+            a.grammarSignals.adverbIssue = true;
+        }
+    }
+
+    /* ======================================================
+       3. TIME ADVERBS
+    ====================================================== */
+
+    validateTimeAdverbs(a) {
+
+        const timeWords = [
+            "today","tomorrow","yesterday",
+            "now","later","soon"
+        ];
+
+        const tokens = a.tokens.map(t => t.lower || t.toLower?.());
+
+        const hasTime = tokens.some(t => timeWords.includes(t));
+
+        if (hasTime) {
+            // placeholder structural validation
+            if (a.complexity === "unknown") {
+                a.grammarSignals.adverbIssue = true;
+            }
+        }
+    }
+
+    /* ======================================================
+       4. DEGREE (comparative / superlative)
+    ====================================================== */
+
+    validateDegreeForms(a) {
+
+        const tokens = a.tokens.map(t => t.lower || t.toLower?.());
+
+        const hasComparativeContext = tokens.includes("more") || tokens.includes("than");
+        const hasSuperlativeContext = tokens.includes("most") || tokens.includes("the");
+
+        if (hasComparativeContext || hasSuperlativeContext) {
+
+            const adverbs = a.adverbs || [];
+
+            for (const adv of adverbs) {
+
+                const word = adv.lower || adv.toLower?.() || adv;
+
+                if (hasComparativeContext) {
+                    if (!word.endsWith("er") && !word.startsWith("more")) {
+                        a.grammarSignals.adverbIssue = true;
+                    }
+                }
+
+                if (hasSuperlativeContext) {
+                    if (!word.endsWith("est") && !word.startsWith("most")) {
+                        a.grammarSignals.adverbIssue = true;
+                    }
+                }
+            }
+        }
+    }
 }
 
 /* ==========================================================
-   Position Rules
+   EXPORT
 ========================================================== */
 
-addAdverbRule({
-    description: "Adverbs of manner usually come after the verb",
-    condition: (adv, context) => context.type === "manner" && context.position !== "afterVerb",
-    correction: (adv) => adv + " (after verb)"
-});
-
-addAdverbRule({
-    description: "Frequency adverbs usually come before the main verb but after 'be'",
-    condition: (adv, context) => context.type === "frequency" && !context.isCorrectPosition,
-    correction: (adv, verb) => verb.base === "be" ? verb.form + " " + adv : adv + " " + verb.form
-});
-
-addAdverbRule({
-    description: "Time adverbs usually come at the end of the sentence",
-    condition: (adv, context) => context.type === "time" && context.position !== "end",
-    correction: (adv) => adv + " (end of sentence)"
-});
-
-/* ==========================================================
-   Comparative and Superlative
-========================================================== */
-
-addAdverbRule({
-    description: "Form comparative with 'more' or '-er' (for short adverbs)",
-    condition: (adv, context) => context.degree === "comparative" && !adv.isComparative,
-    correction: (adv) => adv.isShort ? adv + "er" : "more " + adv
-});
-
-addAdverbRule({
-    description: "Form superlative with 'most' or '-est' (for short adverbs)",
-    condition: (adv, context) => context.degree === "superlative" && !adv.isSuperlative,
-    correction: (adv) => adv.isShort ? adv + "est" : "most " + adv
-});
-
-/* ==========================================================
-   Register Rules
-========================================================== */
-
-GrammarEngine.registerRules(
-    "adverbRules",
-    adverbRules
-);
-
-window.adverbRules = adverbRules;
+module.exports = AdverbRules;
