@@ -2,89 +2,65 @@
 
 /* ==========================================================
    English-Bot
-   Countable Rules v7
-   - Signal-based validation only
+   Countable Rules v9 (Production Ready)
+   - Rule-based architecture
+   - Handles Much/Many quantifiers
 ========================================================== */
 
-class CountableRules {
+/**
+ * Rule: Quantifier Agreement (Much/Many)
+ */
+const quantifier_agreement_rule = new GrammarRule({
+    id: "quantifier_agreement_rule",
+    name: "Quantifier Agreement",
+    category: GrammarCategory.QUANTIFIER,
+    severity: GrammarSeverity.ERROR,
+    priority: 35,
+    enabled: true,
 
-    apply(analysis) {
-
-        if (!analysis || !analysis.grammarSignals) return analysis;
-
-        this.validateQuantifiers(analysis);
-
-        return analysis;
-    }
-
-    /* ======================================================
-       QUANTIFIER VALIDATION ONLY
-    ====================================================== */
-
-    validateQuantifiers(a) {
-
-        const tokens = a.tokens.map(t => t.lower || t.toLower?.() || t);
-
-        const hasMuch = tokens.includes("much");
-        const hasMany = tokens.includes("many");
-
-        const nouns = a.nouns || [];
-
-        for (const noun of nouns) {
-
-            const isUncountable = this.isUncountable(noun);
-
-            /* ==================================================
-               MUCH vs MANY SIGNAL
-            ================================================== */
-
-            if (hasMuch && !isUncountable) {
-                a.grammarSignals.countableIssue = true;
-            }
-
-            if (hasMany && isUncountable) {
-                a.grammarSignals.countableIssue = true;
-            }
-        }
-
-        /* ==================================================
-           ARTICLE SIGNAL (a/an misuse detection only)
-        ================================================== */
-
-        if (a.articles && a.articles.length > 0 && nouns.length > 0) {
-
-            const article = a.articles[0].lower;
-            const noun = nouns[0].lower;
-
-            const startsWithVowel = /^[aeiou]/.test(noun);
-
-            if (article === "a" && startsWithVowel) {
-                a.grammarSignals.articleIssue = true;
-            }
-
-            if (article === "an" && !startsWithVowel) {
-                a.grammarSignals.articleIssue = true;
-            }
-        }
-    }
-
-    /* ======================================================
-       BASIC LEXICON (minimal fallback)
-    ====================================================== */
-
+    // Helper: قائمة الأسماء غير المعدودة (يُنصح بنقلها لاحقاً لـ RuleUtils.js)
     isUncountable(noun) {
+        const uncountables = ["water", "milk", "rice", "air", "information", "advice", "money", "music"];
+        return uncountables.includes(noun.toLowerCase());
+    },
 
-        const uncountables = [
-            "water","milk","rice","air","information",
-            "advice","money","music"
-        ];
+    test(text, analysis, tokens) {
+        if (!analysis.nouns || analysis.nouns.length === 0) return false;
+        
+        const tokenList = tokens.map(t => t.lower);
+        const hasMuch = tokenList.includes("much");
+        const hasMany = tokenList.includes("many");
+        
+        // التحقق من وجود خطأ في الاستخدام
+        return analysis.nouns.some(n => {
+            const isUncountable = this.isUncountable(n.lower);
+            return (hasMuch && !isUncountable) || (hasMany && isUncountable);
+        });
+    },
 
-        return uncountables.includes(noun.lower || noun);
+    fix(text, analysis, tokens) {
+        let newText = text;
+        const hasMuch = tokens.some(t => t.lower === "much");
+        
+        // تبديل المحدد بناءً على حالة الاسم
+        if (hasMuch) {
+            newText = text.replace(/\bmuch\b/gi, "many");
+        } else {
+            newText = text.replace(/\bmany\b/gi, "much");
+        }
+
+        return {
+            text: newText,
+            issue: true,
+            reason: "Incorrect quantifier used. Use 'much' for uncountable nouns and 'many' for countable nouns."
+        };
     }
-}
+});
 
 /* ==========================================================
-   EXPORT
+   REGISTRATION
 ========================================================== */
 
-module.exports = CountableRules;
+GrammarEngine.registerRules([
+    quantifier_agreement_rule
+]);
