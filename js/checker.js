@@ -3,7 +3,7 @@
 /* ==========================================================
    English-Bot
    checker.js
-   Version 3.0 (v7 Compatible)
+   Version 3.0 (v7 Compatible - FIXED)
 ========================================================== */
 
 /* ==========================================================
@@ -61,7 +61,6 @@ async function processText() {
                 Unable to process grammar rules.
             </p>
         `;
-
     } finally {
         hideLoader();
     }
@@ -206,19 +205,15 @@ function renderWritingEvaluation(data) {
 ========================================================== */
 
 function evaluateVocabulary(text) {
-
     const words = text.split(/\s+/).length;
-
     return Math.min(100, 50 + words * 2);
 }
 
 function evaluateNaturalness(text) {
-
     return /[.!?]/.test(text) ? 95 : 80;
 }
 
 function evaluateStyle(text) {
-
     return /\b(therefore|however|moreover)\b/i.test(text) ? 90 : 75;
 }
 
