@@ -2,67 +2,61 @@
 
 /* ==========================================================
    English-Bot
-   Contraction Rules v7
-   - Style / Register layer (NOT grammar)
+   Contraction Rules v9 (Production Ready)
+   - Rule-based architecture
+   - Style/Register aware
 ========================================================== */
 
-class ContractionRules {
+/**
+ * Rule: Formal to Informal Contraction
+ * Applies contractions based on context.
+ */
+const contraction_rule = new GrammarRule({
+    id: "contraction_rule",
+    name: "Contractions",
+    category: GrammarCategory.STYLE,
+    severity: GrammarSeverity.INFO,
+    priority: 50,
+    enabled: true,
 
-    apply(text, context = {}) {
+    test(text, analysis, tokens) {
+        // القاعدة تعمل فقط إذا كان السياق غير رسمي (Informal)
+        return analysis.context?.isInformal === true;
+    },
 
-        if (!text || typeof text !== "string") return text;
-
-        // contractions only apply in informal register
-        if (!context.isInformal) return text;
-
+    fix(text, analysis, tokens) {
         let result = text;
 
-        result = this.applyNegations(result);
-        result = this.applyPronounContractions(result);
-        result = this.applyAuxiliaryContractions(result);
+        // تطبيق الـ Mappings
+        const contractions = {
+            "do not": "don't",
+            "cannot": "can't",
+            "will not": "won't",
+            "I am": "I'm",
+            "you are": "you're",
+            "he is": "he's",
+            "I have": "I've",
+            "we have": "we've",
+            "they have": "they've"
+        };
 
-        return result;
+        for (const [formal, informal] of Object.entries(contractions)) {
+            const regex = new RegExp(`\\b${formal}\\b`, 'gi');
+            result = result.replace(regex, informal);
+        }
+
+        return {
+            text: result,
+            issue: true,
+            reason: "Contractions applied for informal style."
+        };
     }
-
-    /* ======================================================
-       1. NEGATIONS
-    ====================================================== */
-
-    applyNegations(text) {
-
-        return text
-            .replace(/\bdo not\b/g, "don't")
-            .replace(/\bcannot\b/g, "can't")
-            .replace(/\bwill not\b/g, "won't");
-    }
-
-    /* ======================================================
-       2. PRONOUN + BE VERB
-    ====================================================== */
-
-    applyPronounContractions(text) {
-
-        return text
-            .replace(/\bI am\b/g, "I'm")
-            .replace(/\byou are\b/g, "you're")
-            .replace(/\bhe is\b/g, "he's");
-    }
-
-    /* ======================================================
-       3. AUXILIARY VERBS
-    ====================================================== */
-
-    applyAuxiliaryContractions(text) {
-
-        return text
-            .replace(/\bI have\b/g, "I've")
-            .replace(/\bwe have\b/g, "we've")
-            .replace(/\bthey have\b/g, "they've");
-    }
-}
+});
 
 /* ==========================================================
-   EXPORT
+   REGISTRATION
 ========================================================== */
 
-module.exports = ContractionRules;
+GrammarEngine.registerRules([
+    contraction_rule
+]);
