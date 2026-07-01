@@ -2,182 +2,95 @@
 
 /* ==========================================================
    English-Bot
-   Reported Speech Rules
-   Version 7.0 (Clean Compatible)
+   Reported Speech Rules v9 (Production Ready)
+   - Rule-based architecture
+   - Handles Backshift, Pronoun, and Question conversion
 ========================================================== */
 
-const reportedSpeechRules = [];
-
-/* ==========================================================
-   Helper
-========================================================== */
-
-function addReportedSpeechRule(rule) {
-    reportedSpeechRules.push(rule);
-}
-
-/* ==========================================================
-   Tense Backshift Rules
-========================================================== */
-
-addReportedSpeechRule({
-    id: "reported_backshift_present",
-    category: "REPORTED_SPEECH",
+/**
+ * Rule: Tense Backshift (Present -> Past)
+ */
+const backshift_rule = new GrammarRule({
+    id: "reported_backshift",
+    name: "Tense Backshift",
+    category: GrammarCategory.REPORTED_SPEECH,
+    severity: GrammarSeverity.INFO,
     priority: 300,
+    enabled: true,
 
-    test(sentence, context) {
-        return context.isReported && context.tense === "present";
+    test(text, analysis, tokens) {
+        return analysis.isReported && ["present", "presentContinuous", "presentPerfect"].includes(analysis.tense);
     },
 
-    fix(verb) {
+    fix(text, analysis, tokens) {
+        // نستخدم وظائف التحويل الموجودة في الـ analysis objects التي يوفرها المحرك
+        const verb = analysis.verbs[0];
+        const newVerbForm = verb.toPastForm?.() || verb.form; 
         return {
-            text: verb.toPastForm?.() || verb.form,
+            text: text.replace(verb.form, newVerbForm),
             issue: true,
-            reason: "Backshift present → past in reported speech"
+            reason: "Tense backshift required in reported speech."
         };
     }
 });
 
-
-addReportedSpeechRule({
-    id: "reported_backshift_continuous",
-    category: "REPORTED_SPEECH",
-    priority: 290,
-
-    test(sentence, context) {
-        return context.isReported && context.tense === "presentContinuous";
-    },
-
-    fix(verb) {
-        return {
-            text: verb.toPastContinuous?.() || verb.form,
-            issue: true
-        };
-    }
-});
-
-
-addReportedSpeechRule({
-    id: "reported_backshift_perfect",
-    category: "REPORTED_SPEECH",
-    priority: 280,
-
-    test(sentence, context) {
-        return context.isReported && context.tense === "presentPerfect";
-    },
-
-    fix(verb) {
-        return {
-            text: verb.toPastPerfect?.() || verb.form,
-            issue: true
-        };
-    }
-});
-
-/* ==========================================================
-   Pronoun Shift
-========================================================== */
-
-addReportedSpeechRule({
-    id: "reported_pronouns",
-    category: "REPORTED_SPEECH",
-    priority: 260,
-
-    test(word, context) {
-        return context.isReported && word.isPronoun;
-    },
-
-    fix(word) {
-        return {
-            text: word.toReportedForm?.() || word.form,
-            issue: true,
-            reason: "Pronoun shift in reported speech"
-        };
-    }
-});
-
-/* ==========================================================
-   Time & Place Shift
-========================================================== */
-
-addReportedSpeechRule({
-    id: "reported_time_expressions",
-    category: "REPORTED_SPEECH",
+/**
+ * Rule: Pronoun & Deixis Shift (Here -> There)
+ */
+const deixis_shift_rule = new GrammarRule({
+    id: "reported_deixis_shift",
+    name: "Deixis Shift",
+    category: GrammarCategory.REPORTED_SPEECH,
+    severity: GrammarSeverity.INFO,
     priority: 250,
+    enabled: true,
 
-    test(word, context) {
-        return context.isReported && word.isTimeExpression;
+    test(text, analysis, tokens) {
+        return analysis.isReported && tokens.some(t => ["here", "this"].includes(t.lower));
     },
 
-    fix(word) {
-        return {
-            text: word.toReportedTime?.() || word.form,
-            issue: true
-        };
+    fix(text, analysis, tokens) {
+        let newText = text;
+        tokens.forEach(t => {
+            if (t.lower === "here") newText = newText.replace(/\bhere\b/gi, "there");
+            if (t.lower === "this") newText = newText.replace(/\bthis\b/gi, "that");
+        });
+        return { text: newText, issue: true, reason: "Reference shift (here/this) in reported speech." };
     }
 });
 
-addReportedSpeechRule({
-    id: "reported_here_there",
-    category: "REPORTED_SPEECH",
-    priority: 240,
-
-    test(word, context) {
-        return context.isReported && word.form === "here";
-    },
-
-    fix() {
-        return {
-            text: "there",
-            issue: true
-        };
-    }
-});
-
-/* ==========================================================
-   Questions → Reported Speech
-========================================================== */
-
-addReportedSpeechRule({
-    id: "reported_yesno_question",
-    category: "REPORTED_SPEECH",
+/**
+ * Rule: Question to Statement Conversion
+ */
+const reported_question_rule = new GrammarRule({
+    id: "reported_question_structure",
+    name: "Reported Question Structure",
+    category: GrammarCategory.REPORTED_SPEECH,
+    severity: GrammarSeverity.ERROR,
     priority: 220,
+    enabled: true,
 
-    test(sentence, context) {
-        return context.isReported && context.type === "yesNoQuestion";
+    test(text, analysis, tokens) {
+        return analysis.isReported && ["yesNoQuestion", "whQuestion"].includes(analysis.type);
     },
 
-    fix(sentence) {
+    fix(text, analysis, tokens) {
+        const prefix = analysis.type === "yesNoQuestion" ? "if " : "";
+        const statementForm = analysis.toStatementForm?.() || text;
         return {
-            text: "if " + (sentence.toStatementForm?.() || sentence),
+            text: `${prefix}${statementForm}`,
             issue: true,
-            reason: "Yes/No question → if clause"
-        };
-    }
-});
-
-addReportedSpeechRule({
-    id: "reported_wh_question",
-    category: "REPORTED_SPEECH",
-    priority: 210,
-
-    test(sentence, context) {
-        return context.isReported && context.type === "whQuestion";
-    },
-
-    fix(sentence) {
-        return {
-            text: sentence.toStatementForm?.() || sentence,
-            issue: true,
-            reason: "Wh-question → statement form"
+            reason: "Questions in reported speech must be in statement form."
         };
     }
 });
 
 /* ==========================================================
-   Register Rules
+   REGISTRATION
 ========================================================== */
 
-GrammarEngine.registerMany(reportedSpeechRules);
-
-window.reportedSpeechRules = reportedSpeechRules;
+GrammarEngine.registerRules([
+    backshift_rule,
+    deixis_shift_rule,
+    reported_question_rule
+]);
