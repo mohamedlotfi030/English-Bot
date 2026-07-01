@@ -2,104 +2,102 @@
 
 /* ==========================================================
    English-Bot
-   Comparison Rules v7
-   - Signal-based architecture
+   Comparison Rules v9 (Production Ready)
+   - Rule-based architecture
+   - Handles Comparative, Superlative, and Equality patterns
 ========================================================== */
 
-class ComparisonRules {
+/**
+ * Rule: Comparative Context ('than')
+ */
+const comparative_rule = new GrammarRule({
+    id: "comp_than_rule",
+    name: "Comparative Form",
+    category: GrammarCategory.COMPARISON,
+    severity: GrammarSeverity.ERROR,
+    priority: 25,
+    enabled: true,
 
-    apply(analysis) {
+    test(text, analysis, tokens) {
+        if (!tokens.some(t => t.lower === "than")) return false;
+        if (!analysis.adjectives || analysis.adjectives.length === 0) return false;
 
-        if (!analysis || !analysis.grammarSignals) return analysis;
+        return analysis.adjectives.some(adj => {
+            const word = adj.lower;
+            return !word.endsWith("er") && !word.startsWith("more");
+        });
+    },
 
-        this.validateComparativeContext(analysis);
-        this.validateSuperlativeContext(analysis);
-        this.validateEqualityPatterns(analysis);
-
-        return analysis;
+    fix(text, analysis, tokens) {
+        return {
+            text: text,
+            issue: true,
+            reason: "Use comparative form (e.g., 'taller' or 'more beautiful') before 'than'."
+        };
     }
+});
 
-    /* ======================================================
-       1. COMPARATIVE VALIDATION
-    ====================================================== */
+/**
+ * Rule: Superlative Context ('the' / 'most')
+ */
+const superlative_rule = new GrammarRule({
+    id: "comp_superlative_rule",
+    name: "Superlative Form",
+    category: GrammarCategory.COMPARISON,
+    severity: GrammarSeverity.ERROR,
+    priority: 25,
+    enabled: true,
 
-    validateComparativeContext(a) {
+    test(text, analysis, tokens) {
+        const hasSuperContext = tokens.some(t => t.lower === "most" || t.lower === "the");
+        if (!hasSuperContext || !analysis.adjectives) return false;
 
-        const tokens = a.tokens.map(t => t.lower || t.toLower?.() || t);
+        return analysis.adjectives.some(adj => {
+            const word = adj.lower;
+            return !word.endsWith("est") && !word.startsWith("most");
+        });
+    },
 
-        const hasThan = tokens.includes("than");
-
-        if (hasThan) {
-
-            const adjectives = a.adjectives || [];
-
-            for (const adj of adjectives) {
-
-                const word = adj.lower || adj.toLower?.() || adj;
-
-                // very basic morphology check (no generation)
-                const isComparativeForm =
-                    word.endsWith("er") || word.startsWith("more");
-
-                if (!isComparativeForm) {
-                    a.grammarSignals.comparisonIssue = true;
-                }
-            }
-        }
+    fix(text, analysis, tokens) {
+        return {
+            text: text,
+            issue: true,
+            reason: "Use superlative form (e.g., 'fastest' or 'most popular') in superlative context."
+        };
     }
+});
 
-    /* ======================================================
-       2. SUPERLATIVE VALIDATION
-    ====================================================== */
+/**
+ * Rule: Equality Pattern ('as...as')
+ */
+const equality_rule = new GrammarRule({
+    id: "comp_equality_rule",
+    name: "Equality Comparison",
+    category: GrammarCategory.COMPARISON,
+    severity: GrammarSeverity.WARNING,
+    priority: 30,
+    enabled: true,
 
-    validateSuperlativeContext(a) {
+    test(text, analysis, tokens) {
+        const hasAs = tokens.some(t => t.lower === "as");
+        return hasAs && (!analysis.subject || !analysis.adjectives || analysis.adjectives.length === 0);
+    },
 
-        const tokens = a.tokens.map(t => t.lower || t.toLower?.() || t);
-
-        const hasSuperlativeContext =
-            tokens.includes("most") || tokens.includes("the");
-
-        if (hasSuperlativeContext) {
-
-            const adjectives = a.adjectives || [];
-
-            for (const adj of adjectives) {
-
-                const word = adj.lower || adj.toLower?.() || adj;
-
-                const isSuperlativeForm =
-                    word.endsWith("est") || word.startsWith("most");
-
-                if (!isSuperlativeForm) {
-                    a.grammarSignals.comparisonIssue = true;
-                }
-            }
-        }
+    fix(text, analysis, tokens) {
+        return {
+            text: text,
+            issue: true,
+            reason: "Equality comparison requires a subject and an adjective (e.g., 'as fast as')."
+        };
     }
-
-    /* ======================================================
-       3. EQUALITY COMPARISON (AS...AS)
-    ====================================================== */
-
-    validateEqualityPatterns(a) {
-
-        const tokens = a.tokens.map(t => t.lower || t.toLower?.() || t);
-
-        const hasAsPattern =
-            tokens.includes("as");
-
-        if (hasAsPattern) {
-
-            // structural check only
-            if (!a.subject || !a.adjectives || a.adjectives.length === 0) {
-                a.grammarSignals.comparisonIssue = true;
-            }
-        }
-    }
-}
+});
 
 /* ==========================================================
-   EXPORT
+   REGISTRATION
 ========================================================== */
 
-module.exports = ComparisonRules;
+GrammarEngine.registerRules([
+    comparative_rule,
+    superlative_rule,
+    equality_rule
+]);
