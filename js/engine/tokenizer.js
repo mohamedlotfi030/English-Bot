@@ -194,7 +194,31 @@ class Tokenizer {
 
 const tokenizer = new Tokenizer();
 
+/* ==========================================================
+   EXPORT
+========================================================== */
+
 window.tokenizer = tokenizer;
 window.Tokenizer = Tokenizer;
 
-console.log("[Tokenizer] Ready");
+/* ==========================================================
+   REGISTER TO GRAMMAR ENGINE
+========================================================== */
+
+if (
+    window.GrammarEngine &&
+    typeof window.GrammarEngine.registerManager === "function"
+) {
+
+    window.GrammarEngine.registerManager(
+        "tokenizer",
+        tokenizer
+    );
+
+    console.log("[Tokenizer] Registered successfully.");
+
+} else {
+
+    console.warn("[Tokenizer] GrammarEngine is not available.");
+
+}
