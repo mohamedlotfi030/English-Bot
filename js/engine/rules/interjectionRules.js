@@ -2,85 +2,63 @@
 
 /* ==========================================================
    English-Bot
-   Interjection Rules
-   Version 5.0
+   Interjection Signals v7
+   - Discourse/emotion detection only
 ========================================================== */
 
-const interjectionRules = [];
+class InterjectionRules {
 
-/* ==========================================================
-   Rule Registration
-========================================================== */
+    apply(analysis) {
 
-function addInterjectionRule({
-    description,
-    condition,
-    correction
-}) {
-    interjectionRules.push({
-        description,
-        condition,
-        correction
-    });
+        if (!analysis || !analysis.grammarSignals) return analysis;
+
+        this.detectInterjections(analysis);
+
+        return analysis;
+    }
+
+    /* ======================================================
+       DETECTION ONLY (NO CORRECTION)
+    ====================================================== */
+
+    detectInterjections(a) {
+
+        const tokens = a.tokens.map(t => t.lower);
+
+        const knownInterjections = [
+            "oh","wow","oops",
+            "yay","hooray","bravo",
+            "ouch","ow","ugh",
+            "hey","hi","hello",
+            "um","uh","er"
+        ];
+
+        const found = tokens.filter(t =>
+            knownInterjections.includes(t)
+        );
+
+        if (found.length > 0) {
+
+            a.grammarSignals.interjectionDetected = true;
+            a.grammarSignals.interjections = found;
+        }
+
+        /* ==================================================
+           DISCOURSE POSITION SIGNAL
+        ================================================== */
+
+        if (found.includes("um") || found.includes("uh")) {
+            a.grammarSignals.hesitationMarker = true;
+        }
+
+        if (found.includes("wow") || found.includes("oh")) {
+            a.grammarSignals.emphasisMarker = true;
+        }
+    }
 }
 
 /* ==========================================================
-   Surprise Interjections
+   EXPORT
 ========================================================== */
 
-addInterjectionRule({
-    description: "Use 'oh/wow/oops' to express surprise",
-    condition: (interj, context) => context.emotion === "surprise" && !["oh","wow","oops"].includes(interj.form),
-    correction: () => "wow"
-});
-
-/* ==========================================================
-   Joy Interjections
-========================================================== */
-
-addInterjectionRule({
-    description: "Use 'yay/hooray/bravo' to express joy",
-    condition: (interj, context) => context.emotion === "joy" && !["yay","hooray","bravo"].includes(interj.form),
-    correction: () => "yay"
-});
-
-/* ==========================================================
-   Pain Interjections
-========================================================== */
-
-addInterjectionRule({
-    description: "Use 'ouch/ow/ugh' to express pain",
-    condition: (interj, context) => context.emotion === "pain" && !["ouch","ow","ugh"].includes(interj.form),
-    correction: () => "ouch"
-});
-
-/* ==========================================================
-   Greeting Interjections
-========================================================== */
-
-addInterjectionRule({
-    description: "Use 'hey/hi/hello' for greeting",
-    condition: (interj, context) => context.emotion === "greeting" && !["hey","hi","hello"].includes(interj.form),
-    correction: () => "hello"
-});
-
-/* ==========================================================
-   Hesitation Interjections
-========================================================== */
-
-addInterjectionRule({
-    description: "Use 'um/uh/er' for hesitation",
-    condition: (interj, context) => context.emotion === "hesitation" && !["um","uh","er"].includes(interj.form),
-    correction: () => "um"
-});
-
-/* ==========================================================
-   Register Rules
-========================================================== */
-
-GrammarEngine.registerRules(
-    "interjectionRules",
-    interjectionRules
-);
-
-window.interjectionRules = interjectionRules;
+module.exports = InterjectionRules;
