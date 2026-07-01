@@ -2,76 +2,70 @@
 
 /* ==========================================================
    English-Bot
-   Plural Engine v7
-   Structural number system (NOT word mutation)
+   Plural Rules v9 (Production Ready)
+   - Rule-based architecture
+   - Handles Agreement and Uncountable constraints
 ========================================================== */
 
-class PluralEngine {
+/**
+ * Rule: Uncountable Noun Constraint
+ * Flags attempts to pluralize nouns that cannot be pluralized.
+ */
+const uncountable_plural_rule = new GrammarRule({
+    id: "uncountable_plural_rule",
+    name: "Uncountable Noun Constraint",
+    category: GrammarCategory.MORPHOLOGY,
+    severity: GrammarSeverity.ERROR,
+    priority: 20,
+    enabled: true,
 
-    apply(analysis) {
+    test(text, analysis, tokens) {
+        if (!analysis.nouns) return false;
+        return analysis.nouns.some(n => n.isUncountable && n.number === "plural");
+    },
 
-        if (!analysis || !analysis.nouns) return analysis;
-
-        this.validateNumberFeatures(analysis);
-
-        return analysis;
+    fix(text, analysis, tokens) {
+        return {
+            text: text,
+            issue: true,
+            reason: "Uncountable nouns should not be pluralized."
+        };
     }
+});
 
-    /* ======================================================
-       CORE NUMBER VALIDATION
-    ====================================================== */
+/**
+ * Rule: Plural Agreement
+ * Validates that plural nouns trigger plural agreement in the sentence.
+ */
+const plural_agreement_rule = new GrammarRule({
+    id: "plural_agreement_rule",
+    name: "Plural Agreement",
+    category: GrammarCategory.SYNTAX,
+    severity: GrammarSeverity.INFO,
+    priority: 25,
+    enabled: true,
 
-    validateNumberFeatures(a) {
+    test(text, analysis, tokens) {
+        if (!analysis.nouns) return false;
+        // التحقق مما إذا كان هناك اسم جمع يحتاج لاتفاق (Agreement)
+        return analysis.nouns.some(n => n.number === "plural" && n.isCountable);
+    },
 
-        for (const noun of a.nouns || []) {
-
-            this.applyPluralConstraints(noun, a);
-        }
+    fix(text, analysis, tokens) {
+        // هذه القاعدة إعلامية لضبط حالة الجملة، لا تحتاج لتغيير نصي مباشر إلا في سياق الجمع
+        return {
+            text: text,
+            issue: false,
+            reason: "Plural noun detected; ensure subject-verb agreement."
+        };
     }
-
-    /* ======================================================
-       PLURAL CONSTRAINTS
-    ====================================================== */
-
-    applyPluralConstraints(noun, a) {
-
-        /* ==================================================
-           IRREGULAR NOUNS
-        ================================================== */
-
-        if (noun.isIrregular && noun.number === "plural") {
-
-            noun.form = noun.irregularPlural;
-            return;
-        }
-
-        /* ==================================================
-           REGULAR PLURAL MARKING (STRUCTURAL ONLY)
-        ================================================== */
-
-        if (noun.number === "plural" && noun.isCountable) {
-
-            noun.features = noun.features || {};
-            noun.features.requiresPluralAgreement = true;
-        }
-
-        /* ==================================================
-           UNCOUNTABLE NOUNS BLOCKING
-        ================================================== */
-
-        if (noun.isUncountable && noun.number === "plural") {
-
-            noun.grammarWarnings = noun.grammarWarnings || [];
-
-            noun.grammarWarnings.push(
-                "Uncountable noun should not be pluralized"
-            );
-        }
-    }
-}
+});
 
 /* ==========================================================
-   EXPORT
+   REGISTRATION
 ========================================================== */
 
-module.exports = PluralEngine;
+GrammarEngine.registerRules([
+    uncountable_plural_rule,
+    plural_agreement_rule
+]);
