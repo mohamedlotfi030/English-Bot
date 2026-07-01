@@ -3,98 +3,181 @@
 /* ==========================================================
    English-Bot
    Reported Speech Rules
-   Version 5.0
+   Version 7.0 (Clean Compatible)
 ========================================================== */
 
 const reportedSpeechRules = [];
 
 /* ==========================================================
-   Rule Registration
+   Helper
 ========================================================== */
 
-function addReportedSpeechRule({
-    description,
-    condition,
-    correction
-}) {
-    reportedSpeechRules.push({
-        description,
-        condition,
-        correction
-    });
+function addReportedSpeechRule(rule) {
+    reportedSpeechRules.push(rule);
 }
 
 /* ==========================================================
-   Tense Backshift
+   Tense Backshift Rules
 ========================================================== */
 
 addReportedSpeechRule({
-    description: "Backshift present simple to past simple in reported speech",
-    condition: (verb, context) => context.isReported && verb.tense === "present",
-    correction: (verb) => verb.toPastForm()
+    id: "reported_backshift_present",
+    category: "REPORTED_SPEECH",
+    priority: 300,
+
+    test(sentence, context) {
+        return context.isReported && context.tense === "present";
+    },
+
+    fix(verb) {
+        return {
+            text: verb.toPastForm?.() || verb.form,
+            issue: true,
+            reason: "Backshift present → past in reported speech"
+        };
+    }
 });
 
-addReportedSpeechRule({
-    description: "Backshift present continuous to past continuous",
-    condition: (verb, context) => context.isReported && verb.tense === "presentContinuous",
-    correction: (verb) => verb.toPastContinuous()
-});
 
 addReportedSpeechRule({
-    description: "Backshift present perfect to past perfect",
-    condition: (verb, context) => context.isReported && verb.tense === "presentPerfect",
-    correction: (verb) => verb.toPastPerfect()
+    id: "reported_backshift_continuous",
+    category: "REPORTED_SPEECH",
+    priority: 290,
+
+    test(sentence, context) {
+        return context.isReported && context.tense === "presentContinuous";
+    },
+
+    fix(verb) {
+        return {
+            text: verb.toPastContinuous?.() || verb.form,
+            issue: true
+        };
+    }
+});
+
+
+addReportedSpeechRule({
+    id: "reported_backshift_perfect",
+    category: "REPORTED_SPEECH",
+    priority: 280,
+
+    test(sentence, context) {
+        return context.isReported && context.tense === "presentPerfect";
+    },
+
+    fix(verb) {
+        return {
+            text: verb.toPastPerfect?.() || verb.form,
+            issue: true
+        };
+    }
 });
 
 /* ==========================================================
-   Pronoun Changes
+   Pronoun Shift
 ========================================================== */
 
 addReportedSpeechRule({
-    description: "Change pronouns to match perspective in reported speech",
-    condition: (word, context) => context.isReported && word.isPronoun,
-    correction: (word) => word.toReportedForm()
+    id: "reported_pronouns",
+    category: "REPORTED_SPEECH",
+    priority: 260,
+
+    test(word, context) {
+        return context.isReported && word.isPronoun;
+    },
+
+    fix(word) {
+        return {
+            text: word.toReportedForm?.() || word.form,
+            issue: true,
+            reason: "Pronoun shift in reported speech"
+        };
+    }
 });
 
 /* ==========================================================
-   Time/Place Changes
+   Time & Place Shift
 ========================================================== */
 
 addReportedSpeechRule({
-    description: "Change 'today' → 'that day', 'tomorrow' → 'the next day', etc.",
-    condition: (word, context) => context.isReported && word.isTimeExpression,
-    correction: (word) => word.toReportedTime()
+    id: "reported_time_expressions",
+    category: "REPORTED_SPEECH",
+    priority: 250,
+
+    test(word, context) {
+        return context.isReported && word.isTimeExpression;
+    },
+
+    fix(word) {
+        return {
+            text: word.toReportedTime?.() || word.form,
+            issue: true
+        };
+    }
 });
 
 addReportedSpeechRule({
-    description: "Change 'here' → 'there' in reported speech",
-    condition: (word, context) => context.isReported && word.form === "here",
-    correction: () => "there"
+    id: "reported_here_there",
+    category: "REPORTED_SPEECH",
+    priority: 240,
+
+    test(word, context) {
+        return context.isReported && word.form === "here";
+    },
+
+    fix() {
+        return {
+            text: "there",
+            issue: true
+        };
+    }
 });
 
 /* ==========================================================
-   Questions in Reported Speech
+   Questions → Reported Speech
 ========================================================== */
 
 addReportedSpeechRule({
-    description: "Convert yes/no questions to 'if/whether' clauses",
-    condition: (sentence, context) => context.isReported && context.type === "yesNoQuestion",
-    correction: (sentence) => "if " + sentence.toStatementForm()
+    id: "reported_yesno_question",
+    category: "REPORTED_SPEECH",
+    priority: 220,
+
+    test(sentence, context) {
+        return context.isReported && context.type === "yesNoQuestion";
+    },
+
+    fix(sentence) {
+        return {
+            text: "if " + (sentence.toStatementForm?.() || sentence),
+            issue: true,
+            reason: "Yes/No question → if clause"
+        };
+    }
 });
 
 addReportedSpeechRule({
-    description: "Convert wh-questions to statement word order",
-    condition: (sentence, context) => context.isReported && context.type === "whQuestion",
-    correction: (sentence) => sentence.toStatementForm()
+    id: "reported_wh_question",
+    category: "REPORTED_SPEECH",
+    priority: 210,
+
+    test(sentence, context) {
+        return context.isReported && context.type === "whQuestion";
+    },
+
+    fix(sentence) {
+        return {
+            text: sentence.toStatementForm?.() || sentence,
+            issue: true,
+            reason: "Wh-question → statement form"
+        };
+    }
 });
 
 /* ==========================================================
    Register Rules
 ========================================================== */
 
-GrammarEngine.registerRules(
-    "reportedSpeechRules",
-    reportedSpeechRules
-);
+GrammarEngine.registerMany(reportedSpeechRules);
 
 window.reportedSpeechRules = reportedSpeechRules;
