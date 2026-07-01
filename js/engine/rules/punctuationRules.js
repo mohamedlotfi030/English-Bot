@@ -2,105 +2,85 @@
 
 /* ==========================================================
    English-Bot
-   Punctuation Engine v7
-   Discourse structure formatting layer
+   Punctuation Rules v9 (Production Ready)
+   - Rule-based structural formatter
+   - Handles sentence endings, lists, and punctuation marks
 ========================================================== */
 
-class PunctuationEngine {
+/**
+ * Rule: Sentence Ending Punctuation
+ */
+const sentence_end_rule = new GrammarRule({
+    id: "punct_sentence_end",
+    name: "Sentence Ending Punctuation",
+    category: GrammarCategory.PUNCTUATION,
+    severity: GrammarSeverity.ERROR,
+    priority: 80,
+    enabled: true,
 
-    apply(analysis) {
+    test(text, analysis, tokens) {
+        const lastChar = text.trim().slice(-1);
+        const expected = analysis.sentenceType === "question" ? "?" : 
+                         analysis.sentenceType === "exclamation" ? "!" : ".";
+        return lastChar !== expected;
+    },
 
-        if (!analysis) return analysis;
-
-        this.applySentenceEndPunctuation(analysis);
-        this.applyListPunctuation(analysis);
-        this.applyClauseBoundaries(analysis);
-        this.applyApostrophes(analysis);
-
-        return analysis;
+    fix(text, analysis, tokens) {
+        const expected = analysis.sentenceType === "question" ? "?" : 
+                         analysis.sentenceType === "exclamation" ? "!" : ".";
+        const newText = text.trim().replace(/[.?!]$/, "") + expected;
+        return { text: newText, issue: true, reason: "Incorrect sentence ending punctuation." };
     }
+});
 
-    /* ======================================================
-       SENTENCE END MARKS
-    ====================================================== */
+/**
+ * Rule: Comma in Clauses
+ * Ensures introductory or dependent clauses end with a comma.
+ */
+const clause_comma_rule = new GrammarRule({
+    id: "punct_clause_comma",
+    name: "Clause Comma",
+    category: GrammarCategory.PUNCTUATION,
+    severity: GrammarSeverity.WARNING,
+    priority: 50,
+    enabled: true,
 
-    applySentenceEndPunctuation(a) {
+    test(text, analysis, tokens) {
+        return analysis.clauses?.some(c => (c.isIntroductory || c.isDependent) && !c.endingComma);
+    },
 
-        a.punctuation = a.punctuation || {};
-
-        switch (a.sentenceType) {
-
-            case "question":
-                a.punctuation.end = "?";
-                break;
-
-            case "exclamation":
-                a.punctuation.end = "!";
-                break;
-
-            default:
-                a.punctuation.end = ".";
-        }
+    fix(text, analysis, tokens) {
+        return { text, issue: true, reason: "Introductory or dependent clauses usually require a comma." };
     }
+});
 
-    /* ======================================================
-       LIST STRUCTURE
-    ====================================================== */
+/**
+ * Rule: Apostrophe Usage
+ * Validates words that require apostrophes (possessives/contractions).
+ */
+const apostrophe_rule = new GrammarRule({
+    id: "punct_apostrophe",
+    name: "Apostrophe Validation",
+    category: GrammarCategory.PUNCTUATION,
+    severity: GrammarSeverity.ERROR,
+    priority: 40,
+    enabled: true,
 
-    applyListPunctuation(a) {
+    test(text, analysis, tokens) {
+        return tokens.some(t => t.requiresApostrophe && !t.lower.includes("'"));
+    },
 
-        const list = a.listItems || [];
-
-        if (list.length > 1) {
-
-            a.punctuation.listSeparator = ",";
-            a.punctuation.listConnector = "and";
-        }
+    fix(text, analysis, tokens) {
+        return { text, issue: true, reason: "Missing apostrophe in possessive or contraction." };
     }
-
-    /* ======================================================
-       CLAUSE BOUNDARIES
-    ====================================================== */
-
-    applyClauseBoundaries(a) {
-
-        const clauses = a.clauses || [];
-
-        for (let i = 0; i < clauses.length - 1; i++) {
-
-            const clause = clauses[i];
-
-            if (clause.isIntroductory) {
-                clause.endingComma = true;
-            }
-
-            if (clause.isDependent) {
-                clause.requiresComma = true;
-            }
-        }
-    }
-
-    /* ======================================================
-       APOSTROPHES (STRUCTURAL ONLY)
-    ====================================================== */
-
-    applyApostrophes(a) {
-
-        const words = a.tokens || [];
-
-        for (const w of words) {
-
-            if (w.requiresApostrophe) {
-
-                w.features = w.features || {};
-                w.features.apostrophe = true;
-            }
-        }
-    }
-}
+});
 
 /* ==========================================================
-   EXPORT
+   REGISTRATION
 ========================================================== */
 
-module.exports = PunctuationEngine;
+GrammarEngine.registerRules([
+    sentence_end_rule,
+    clause_comma_rule,
+    apostrophe_rule
+]);
