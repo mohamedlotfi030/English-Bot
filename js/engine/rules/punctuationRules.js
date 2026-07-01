@@ -2,91 +2,105 @@
 
 /* ==========================================================
    English-Bot
-   Punctuation Rules
-   Version 5.0
+   Punctuation Engine v7
+   Discourse structure formatting layer
 ========================================================== */
 
-const punctuationRules = [];
+class PunctuationEngine {
 
-/* ==========================================================
-   Rule Registration
-========================================================== */
+    apply(analysis) {
 
-function addPunctuationRule({
-    description,
-    condition,
-    correction
-}) {
-    punctuationRules.push({
-        description,
-        condition,
-        correction
-    });
+        if (!analysis) return analysis;
+
+        this.applySentenceEndPunctuation(analysis);
+        this.applyListPunctuation(analysis);
+        this.applyClauseBoundaries(analysis);
+        this.applyApostrophes(analysis);
+
+        return analysis;
+    }
+
+    /* ======================================================
+       SENTENCE END MARKS
+    ====================================================== */
+
+    applySentenceEndPunctuation(a) {
+
+        a.punctuation = a.punctuation || {};
+
+        switch (a.sentenceType) {
+
+            case "question":
+                a.punctuation.end = "?";
+                break;
+
+            case "exclamation":
+                a.punctuation.end = "!";
+                break;
+
+            default:
+                a.punctuation.end = ".";
+        }
+    }
+
+    /* ======================================================
+       LIST STRUCTURE
+    ====================================================== */
+
+    applyListPunctuation(a) {
+
+        const list = a.listItems || [];
+
+        if (list.length > 1) {
+
+            a.punctuation.listSeparator = ",";
+            a.punctuation.listConnector = "and";
+        }
+    }
+
+    /* ======================================================
+       CLAUSE BOUNDARIES
+    ====================================================== */
+
+    applyClauseBoundaries(a) {
+
+        const clauses = a.clauses || [];
+
+        for (let i = 0; i < clauses.length - 1; i++) {
+
+            const clause = clauses[i];
+
+            if (clause.isIntroductory) {
+                clause.endingComma = true;
+            }
+
+            if (clause.isDependent) {
+                clause.requiresComma = true;
+            }
+        }
+    }
+
+    /* ======================================================
+       APOSTROPHES (STRUCTURAL ONLY)
+    ====================================================== */
+
+    applyApostrophes(a) {
+
+        const words = a.tokens || [];
+
+        for (const w of words) {
+
+            if (w.requiresApostrophe) {
+
+                w.features = w.features || {};
+                w.features.apostrophe = true;
+            }
+        }
+    }
 }
 
 /* ==========================================================
-   Periods
+   EXPORT
 ========================================================== */
 
-addPunctuationRule({
-    description: "Use a period at the end of declarative sentences",
-    condition: (sentence, context) => context.type === "statement" && !sentence.endsWith("."),
-    correction: (sentence) => sentence + "."
-});
-
-/* ==========================================================
-   Question Marks
-========================================================== */
-
-addPunctuationRule({
-    description: "Use a question mark at the end of interrogative sentences",
-    condition: (sentence, context) => context.type === "question" && !sentence.endsWith("?"),
-    correction: (sentence) => sentence + "?"
-});
-
-/* ==========================================================
-   Exclamation Marks
-========================================================== */
-
-addPunctuationRule({
-    description: "Use an exclamation mark for strong emotions or commands",
-    condition: (sentence, context) => context.type === "exclamation" && !sentence.endsWith("!"),
-    correction: (sentence) => sentence + "!"
-});
-
-/* ==========================================================
-   Commas
-========================================================== */
-
-addPunctuationRule({
-    description: "Use commas to separate items in a list",
-    condition: (sentence, context) => context.hasList && !sentence.includes(","),
-    correction: (sentence) => sentence.replace(/(\w+)\s(\w+)/, "$1, $2")
-});
-
-addPunctuationRule({
-    description: "Use commas after introductory phrases",
-    condition: (sentence, context) => context.hasIntro && !sentence.includes(","),
-    correction: (sentence) => sentence.replace(/^(.*?)\s/, "$1, ")
-});
-
-/* ==========================================================
-   Apostrophes
-========================================================== */
-
-addPunctuationRule({
-    description: "Use apostrophes for contractions and possessives",
-    condition: (word, context) => context.requiresApostrophe && !word.includes("'"),
-    correction: (word) => word.addApostrophe()
-});
-
-/* ==========================================================
-   Register Rules
-========================================================== */
-
-GrammarEngine.registerRules(
-    "punctuationRules",
-    punctuationRules
-);
-
-window.punctuationRules = punctuationRules;
+module.exports = PunctuationEngine;
