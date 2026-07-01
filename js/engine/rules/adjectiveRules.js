@@ -2,77 +2,112 @@
 
 /* ==========================================================
    English-Bot
-   Adjective Rules
-   Version 5.0
+   Adjective Rules v7
+   - Signal-based
+   - Analyzer v7 compatible
 ========================================================== */
 
-const adjectiveRules = [];
+class AdjectiveRules {
 
-/* ==========================================================
-   Rule Registration
-========================================================== */
+    apply(analysis) {
 
-function addAdjectiveRule({
-    description,
-    condition,
-    correction
-}) {
-    adjectiveRules.push({
-        description,
-        condition,
-        correction
-    });
+        if (!analysis || !analysis.grammarSignals) return analysis;
+
+        this.validateAdjectiveOrder(analysis);
+        this.validateComparativeForms(analysis);
+        this.validateSuperlativeForms(analysis);
+        this.validatePositionHints(analysis);
+
+        return analysis;
+    }
+
+    /* ======================================================
+       1. ADJECTIVE ORDER (soft validation)
+    ====================================================== */
+
+    validateAdjectiveOrder(a) {
+
+        if (!a.adjectives || a.adjectives.length <= 1) return;
+
+        // If analyzer later provides ordering metadata
+        if (a.grammarSignals.sentenceIssue === false) return;
+
+        // mark only signal, not fix
+        a.grammarSignals.adjectiveIssue = true;
+    }
+
+    /* ======================================================
+       2. COMPARATIVE FORM
+    ====================================================== */
+
+    validateComparativeForms(a) {
+
+        const adjectives = a.adjectives || [];
+
+        for (const adj of adjectives) {
+
+            const word = adj.lower || adj.toLower?.() || adj;
+
+            const isComparativeContext =
+                a.tokens.some(t => (t.lower || t.toLower?.()) === "than");
+
+            if (isComparativeContext) {
+
+                // placeholder heuristic
+                if (!word.endsWith("er") && !word.startsWith("more")) {
+                    a.grammarSignals.adjectiveIssue = true;
+                }
+            }
+        }
+    }
+
+    /* ======================================================
+       3. SUPERLATIVE FORM
+    ====================================================== */
+
+    validateSuperlativeForms(a) {
+
+        const tokens = a.tokens.map(t => t.lower || t.toLower?.());
+
+        if (tokens.includes("most") || tokens.includes("the")) {
+
+            const adjectives = a.adjectives || [];
+
+            for (const adj of adjectives) {
+
+                const word = adj.lower || adj.toLower?.() || adj;
+
+                if (!word.endsWith("est") && !word.startsWith("most")) {
+                    a.grammarSignals.adjectiveIssue = true;
+                }
+            }
+        }
+    }
+
+    /* ======================================================
+       4. POSITION RULE (before noun vs predicate)
+    ====================================================== */
+
+    validatePositionHints(a) {
+
+        if (!a.adjectives || a.adjectives.length === 0) return;
+
+        // If adjective exists after verb be → OK pattern
+        const hasBe = (a.auxiliaries || []).some(v =>
+            ["is","are","am","was","were"].includes(v.lower || v)
+        );
+
+        if (hasBe) {
+            return; // correct structure
+        }
+
+        // otherwise mark potential issue
+        a.grammarSignals.adjectiveIssue = true;
+    }
 }
 
 /* ==========================================================
-   Position Rules
+   EXPORT
 ========================================================== */
 
-addAdjectiveRule({
-    description: "Adjective usually comes before the noun",
-    condition: (adj, context) => context.position !== "beforeNoun",
-    correction: (adj) => adj + " (before noun)"
-});
-
-addAdjectiveRule({
-    description: "Adjective can come after 'be' verb",
-    condition: (adj, context) => context.afterVerb !== "be",
-    correction: (adj) => "be " + adj
-});
-
-/* ==========================================================
-   Comparative and Superlative
-========================================================== */
-
-addAdjectiveRule({
-    description: "Form comparative by adding -er or using 'more'",
-    condition: (adj, context) => context.degree === "comparative" && !adj.isComparative,
-    correction: (adj) => adj.isShort ? adj + "er" : "more " + adj
-});
-
-addAdjectiveRule({
-    description: "Form superlative by adding -est or using 'most'",
-    condition: (adj, context) => context.degree === "superlative" && !adj.isSuperlative,
-    correction: (adj) => adj.isShort ? adj + "est" : "most " + adj
-});
-
-/* ==========================================================
-   Order of Adjectives
-========================================================== */
-
-addAdjectiveRule({
-    description: "Follow adjective order: opinion → size → age → shape → color → origin → material → purpose → noun",
-    condition: (adjList, context) => !adjList.isOrdered,
-    correction: (adjList) => adjList.sortByStandardOrder()
-});
-
-/* ==========================================================
-   Register Rules
-========================================================== */
-
-GrammarEngine.registerRules(
-    "adjectiveRules",
-    adjectiveRules
-);
-
-window.adjectiveRules = adjectiveRules;
+module.exports = AdjectiveRules;
