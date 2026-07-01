@@ -2,167 +2,416 @@
 
 /* ==========================================================
    English-Bot
-   GrammarEngine v7.0 (FIXED CORE)
+   Grammar Engine
+   Version 8.0
+   Core Architecture
 ========================================================== */
 
 class GrammarEngineClass {
 
     constructor() {
 
-        /* =========================
-           Core registries
-        ========================= */
-
-        this.dictionaries = new Map();
-        this.managers = new Map();
+        /* ==========================================
+           Core
+        ========================================== */
 
         this.initialized = false;
+
+        /* ==========================================
+           Registries
+        ========================================== */
+
+        this.managers = new Map();
+
+        this.dictionaries = new Map();
+
+        /* ==========================================
+           Statistics
+        ========================================== */
+
+        this.statistics = {
+
+            loadedRules: 0,
+
+            loadedDictionaries: 0,
+
+            analyzedSentences: 0,
+
+            corrections: 0
+
+        };
+
     }
 
-    /* ==========================================================
-       INIT
-    ========================================================== */
+    /* ======================================================
+       Manager System
+    ====================================================== */
 
-    initialize() {
+    registerManager(name, manager) {
 
-        // Ensure required modules exist
-        if (!window.tokenizer) {
-            throw new Error("[GrammarEngine] Missing: tokenizer");
-        }
+        if (!name || !manager) return false;
 
-        if (!window.analyzer) {
-            throw new Error("[GrammarEngine] Missing: analyzer");
-        }
+        this.managers.set(name, manager);
 
-        if (!window.ruleManager) {
-            throw new Error("[GrammarEngine] Missing: ruleManager");
-        }
-
-        this.initialized = true;
-
-        console.log("[GrammarEngine] Initialized successfully");
-    }
-
-    /* ==========================================================
-       DICTIONARIES SYSTEM (FIX FOR YOUR ERRORS)
-    ========================================================== */
-
-    registerDictionary(name, data) {
-
-        if (!name) return false;
-
-        this.dictionaries.set(name, data);
+        console.log(`[GrammarEngine] Manager registered: ${name}`);
 
         return true;
+
+    }
+
+    getManager(name) {
+
+        return this.managers.get(name) || null;
+
+    }
+
+    /* ======================================================
+       Dictionary System
+    ====================================================== */
+
+    registerDictionary(name, dictionary) {
+
+        if (!name || !dictionary) return false;
+
+        this.dictionaries.set(name, dictionary);
+
+        this.statistics.loadedDictionaries =
+            this.dictionaries.size;
+
+        console.log(`[GrammarEngine] Dictionary registered: ${name}`);
+
+        return true;
+
     }
 
     getDictionary(name) {
 
         return this.dictionaries.get(name) || null;
+
     }
 
-    /* ==========================================================
-       REGISTER MANAGERS (Tokenizer / Analyzer / RuleManager)
-    ========================================================== */
+    /* ======================================================
+       Rule Registration
+    ====================================================== */
 
-    registerManager(name, instance) {
+    registerRule(rule) {
 
-        this.managers.set(name, instance);
+        const manager = this.getManager("ruleManager");
+
+        if (!manager) {
+
+            console.warn("[GrammarEngine] RuleManager not ready");
+
+            return false;
+
+        }
+
+        manager.add(rule);
+
+        this.statistics.loadedRules =
+            manager.getRules().length;
 
         return true;
+
     }
 
-    getManager(name) {
+    registerRules(rules) {
 
-        return this.managers.get(name);
+        if (!Array.isArray(rules)) {
+
+            console.error("[GrammarEngine] registerRules expects Array");
+
+            return false;
+
+        }
+
+        for (const rule of rules) {
+
+            this.registerRule(rule);
+
+        }
+
+        return true;
+
     }
+       /* ======================================================
+       Initialize
+    ====================================================== */
 
-    /* ==========================================================
-       registerMany (FIX for rules error)
-       بعض ملفات rules بتستعملها
-    ========================================================== */
+    initialize() {
 
-    registerMany(input) {
+        const requiredManagers = [
 
-        // Case 1: array of rules
-        if (Array.isArray(input)) {
+            "tokenizer",
 
-            for (const item of input) {
-                this._registerRule(item);
+            "analyzer",
+
+            "ruleManager",
+
+            "corrector"
+
+        ];
+
+        for (const name of requiredManagers) {
+
+            if (!this.getManager(name)) {
+
+                throw new Error(`[GrammarEngine] Missing manager: ${name}`);
+
             }
 
-            return true;
         }
 
-        // Case 2: single rule
-        return this._registerRule(input);
+        this.initialized = true;
+
+        console.log("[GrammarEngine] Initialized successfully");
+
+        return true;
+
     }
 
-    _registerRule(rule) {
-
-        if (!rule) return false;
-
-        const rm = this.getManager("ruleManager");
-
-        if (rm && typeof rm.add === "function") {
-            return rm.add(rule);
-        }
-
-        console.warn("[GrammarEngine] ruleManager not ready");
-        return false;
-    }
-
-    /* ==========================================================
-       CORE PIPELINE
-    ========================================================== */
+    /* ======================================================
+       Tokenize
+    ====================================================== */
 
     tokenize(text) {
 
-        return window.tokenizer.tokenize(text);
+        const tokenizer = this.getManager("tokenizer");
+
+        if (!tokenizer) {
+
+            throw new Error("Tokenizer not registered.");
+
+        }
+
+        return tokenizer.tokenize(text);
+
     }
+
+    /* ======================================================
+       Analyze
+    ====================================================== */
 
     analyze(text) {
 
+        const analyzer = this.getManager("analyzer");
+
+        if (!analyzer) {
+
+            throw new Error("Analyzer not registered.");
+
+        }
+
         const tokens = this.tokenize(text);
 
-        return window.analyzer.analyze(tokens);
+        return analyzer.analyze(tokens);
+
     }
+
+    /* ======================================================
+       Correct
+    ====================================================== */
 
     correct(text) {
 
-        const tokens = this.tokenize(text);
-        const analysis = this.analyze(text);
+        if (!text || !text.trim()) {
 
-        const rm = this.getManager("ruleManager");
-
-        if (!rm) {
             return {
-                text,
+
+                text: "",
+
                 issues: [],
-                error: "RuleManager not found"
+
+                suggestions: [],
+
+                report: {},
+
+                evaluation: {},
+
+                helper: {}
+
             };
+
         }
 
-        return rm.execute(text, analysis, tokens);
-    }
-}
+        if (!this.initialized) {
 
+            this.initialize();
+
+        }
+
+        this.statistics.analyzedSentences++;
+
+        const tokenizer = this.getManager("tokenizer");
+
+        const analyzer = this.getManager("analyzer");
+
+        const ruleManager = this.getManager("ruleManager");
+
+        const corrector = this.getManager("corrector");
+
+        const tokens = tokenizer.tokenize(text);
+
+        const analysis = analyzer.analyze(tokens);
+
+        const result = ruleManager.execute(
+
+            text,
+
+            analysis,
+
+            tokens
+
+        );
+
+        const helper = corrector.correct(
+
+            text,
+
+            analysis,
+
+            tokens
+
+        );
+
+        this.statistics.corrections++;
+
+        return {
+
+            text:
+
+                result.text ||
+
+                helper.corrected ||
+
+                text,
+
+            issues:
+
+                result.issues || [],
+
+            suggestions:
+
+                result.suggestions || [],
+
+            report:
+
+                result.report || {},
+
+            evaluation:
+
+                result.evaluation || {},
+
+            helper
+
+        };
+
+    }
+       /* ======================================================
+       Statistics
+    ====================================================== */
+
+    getStatistics() {
+
+        const ruleManager = this.getManager("ruleManager");
+
+        if (ruleManager && typeof ruleManager.getRules === "function") {
+
+            this.statistics.loadedRules =
+                ruleManager.getRules().length;
+
+        }
+
+        this.statistics.loadedDictionaries =
+            this.dictionaries.size;
+
+        return {
+
+            ...this.statistics
+
+        };
+
+    }
+
+    /* ======================================================
+       Reset Statistics
+    ====================================================== */
+
+    resetStatistics() {
+
+        this.statistics = {
+
+            loadedRules: 0,
+
+            loadedDictionaries: this.dictionaries.size,
+
+            analyzedSentences: 0,
+
+            corrections: 0
+
+        };
+
+    }
+
+    /* ======================================================
+       Version
+    ====================================================== */
+
+    getVersion() {
+
+        return "8.0";
+
+    }
+
+}
 /* ==========================================================
-   SINGLETON
+   Singleton
 ========================================================== */
 
 const GrammarEngine = new GrammarEngineClass();
 
+/* ==========================================================
+   Export
+========================================================== */
+
 window.GrammarEngine = GrammarEngine;
 
 /* ==========================================================
-   AUTO INIT SAFETY
+   Auto Initialize
 ========================================================== */
 
-window.addEventListener("load", () => {
+window.addEventListener("DOMContentLoaded", () => {
+
     try {
-        GrammarEngine.initialize();
-    } catch (err) {
-        console.error(err);
+
+        if (
+
+            GrammarEngine.getManager("tokenizer") &&
+
+            GrammarEngine.getManager("analyzer") &&
+
+            GrammarEngine.getManager("ruleManager") &&
+
+            GrammarEngine.getManager("corrector")
+
+        ) {
+
+            GrammarEngine.initialize();
+
+        }
+
     }
+
+    catch (error) {
+
+        console.warn(
+
+            "[GrammarEngine]",
+
+            error.message
+
+        );
+
+    }
+
 });
