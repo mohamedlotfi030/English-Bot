@@ -2,196 +2,53 @@
 
 /* ==========================================================
    English-Bot
-   Tense Rules
-   Version 7.0
+   Tense Rules v9 (Production Ready)
+   - Rule-based architecture
+   - Handles temporal consistency and tense correction
 ========================================================== */
 
-const tenseRules = [];
+/**
+ * قاعدة عامة للأزمنة (Tense Rule Template)
+ * نقوم بإنشاء مصفوفة من القواعد بناءً على أنواع الأزمنة المدعومة.
+ */
+const tenseConfigs = [
+    { id: "present_simple", check: "isHabitOrFact", target: "isPresentSimple", fix: "toPresentSimple" },
+    { id: "present_continuous", check: "isActionNow", target: "isPresentContinuous", fix: "toPresentContinuous" },
+    { id: "past_simple", check: "isCompletedPast", target: "isPastSimple", fix: "toPastSimple" },
+    { id: "past_continuous", check: "isOngoingPast", target: "isPastContinuous", fix: "toPastContinuous" },
+    { id: "future_simple", check: "isFuturePrediction", target: "isFutureSimple", fix: "toFutureSimple" },
+    { id: "future_continuous", check: "isFutureOngoing", target: "isFutureContinuous", fix: "toFutureContinuous" },
+    { id: "present_perfect", check: "isPresentRelevance", target: "isPresentPerfect", fix: "toPresentPerfect" },
+    { id: "past_perfect", check: "isPastBeforePast", target: "isPastPerfect", fix: "toPastPerfect" },
+    { id: "future_perfect", check: "isFutureBeforeFuture", target: "isFuturePerfect", fix: "toFuturePerfect" }
+];
 
-/* ==========================================================
-   Present Simple
-========================================================== */
-
-tenseRules.push({
-    id: "present_simple",
-    type: "tense",
-    priority: 10,
-
-    description: "Use present simple for habits and facts",
-
-    test(sentence, context) {
-        return context.isHabitOrFact && !context.isPresentSimple;
-    },
-
-    fix(sentence) {
-        return sentence.toPresentSimple?.() || sentence;
-    }
-});
-
-/* ==========================================================
-   Present Continuous
-========================================================== */
-
-tenseRules.push({
-    id: "present_continuous",
-    type: "tense",
-    priority: 20,
-
-    description: "Use present continuous for actions happening now",
-
-    test(sentence, context) {
-        return context.isActionNow && !context.isPresentContinuous;
-    },
-
-    fix(sentence) {
-        return sentence.toPresentContinuous?.() || sentence;
-    }
-});
-
-/* ==========================================================
-   Past Simple
-========================================================== */
-
-tenseRules.push({
-    id: "past_simple",
-    type: "tense",
-    priority: 30,
-
-    description: "Use past simple for completed actions in the past",
-
-    test(sentence, context) {
-        return context.isCompletedPast && !context.isPastSimple;
-    },
-
-    fix(sentence) {
-        return sentence.toPastSimple?.() || sentence;
-    }
-});
-
-/* ==========================================================
-   Past Continuous
-========================================================== */
-
-tenseRules.push({
-    id: "past_continuous",
-    type: "tense",
-    priority: 40,
-
-    description: "Use past continuous for ongoing actions in the past",
-
-    test(sentence, context) {
-        return context.isOngoingPast && !context.isPastContinuous;
-    },
-
-    fix(sentence) {
-        return sentence.toPastContinuous?.() || sentence;
-    }
-});
-
-/* ==========================================================
-   Future Simple
-========================================================== */
-
-tenseRules.push({
-    id: "future_simple",
-    type: "tense",
+const tenseRules = tenseConfigs.map(cfg => new GrammarRule({
+    id: `tense_${cfg.id}`,
+    name: `Tense Correction: ${cfg.id}`,
+    category: GrammarCategory.TENSE,
+    severity: GrammarSeverity.ERROR,
     priority: 50,
+    enabled: true,
 
-    description: "Use future simple (will + verb) for predictions or decisions",
-
-    test(sentence, context) {
-        return context.isFuturePrediction && !context.isFutureSimple;
+    test(text, analysis, tokens) {
+        // التحقق مما إذا كان السياق يتطلب زمناً مختلفاً عما هو موجود
+        return analysis[cfg.check] && !analysis[cfg.target];
     },
 
-    fix(sentence) {
-        return sentence.toFutureSimple?.() || sentence;
+    fix(text, analysis, tokens) {
+        // استخدام وظائف المحرك لتحويل الصيغة (مثلاً toPresentSimple)
+        const transformedText = analysis[cfg.fix]?.() || text;
+        return {
+            text: transformedText,
+            issue: true,
+            reason: `Use ${cfg.id.replace('_', ' ')} for the current context.`
+        };
     }
-});
+}));
 
 /* ==========================================================
-   Future Continuous
+   REGISTRATION
 ========================================================== */
 
-tenseRules.push({
-    id: "future_continuous",
-    type: "tense",
-    priority: 60,
-
-    description: "Use future continuous for actions in progress at a future time",
-
-    test(sentence, context) {
-        return context.isFutureOngoing && !context.isFutureContinuous;
-    },
-
-    fix(sentence) {
-        return sentence.toFutureContinuous?.() || sentence;
-    }
-});
-
-/* ==========================================================
-   Present Perfect
-========================================================== */
-
-tenseRules.push({
-    id: "present_perfect",
-    type: "tense",
-    priority: 70,
-
-    description: "Use present perfect for actions with relevance to the present",
-
-    test(sentence, context) {
-        return context.isPresentRelevance && !context.isPresentPerfect;
-    },
-
-    fix(sentence) {
-        return sentence.toPresentPerfect?.() || sentence;
-    }
-});
-
-/* ==========================================================
-   Past Perfect
-========================================================== */
-
-tenseRules.push({
-    id: "past_perfect",
-    type: "tense",
-    priority: 80,
-
-    description: "Use past perfect for actions completed before another past action",
-
-    test(sentence, context) {
-        return context.isPastBeforePast && !context.isPastPerfect;
-    },
-
-    fix(sentence) {
-        return sentence.toPastPerfect?.() || sentence;
-    }
-});
-
-/* ==========================================================
-   Future Perfect
-========================================================== */
-
-tenseRules.push({
-    id: "future_perfect",
-    type: "tense",
-    priority: 90,
-
-    description: "Use future perfect for actions completed before a future time",
-
-    test(sentence, context) {
-        return context.isFutureBeforeFuture && !context.isFuturePerfect;
-    },
-
-    fix(sentence) {
-        return sentence.toFuturePerfect?.() || sentence;
-    }
-});
-
-/* ==========================================================
-   REGISTER
-========================================================== */
-
-GrammarEngine.registerRules("tense", tenseRules);
-
-window.tenseRules = tenseRules;
+GrammarEngine.registerRules(tenseRules);
