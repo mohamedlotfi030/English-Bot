@@ -2,85 +2,84 @@
 
 /* ==========================================================
    English-Bot
-   Conditional Rules
-   Version 5.0
+   Conditional Rules v7
+   - Signal-based architecture
 ========================================================== */
 
-const conditionalRules = [];
+class ConditionalRules {
 
-/* ==========================================================
-   Rule Registration
-========================================================== */
+    apply(analysis) {
 
-function addConditionalRule({
-    description,
-    condition,
-    correction
-}) {
-    conditionalRules.push({
-        description,
-        condition,
-        correction
-    });
+        if (!analysis || !analysis.grammarSignals) return analysis;
+
+        this.validateConditionalStructure(analysis);
+
+        return analysis;
+    }
+
+    /* ======================================================
+       CORE CONDITIONAL DETECTION
+    ====================================================== */
+
+    validateConditionalStructure(a) {
+
+        const tokens = a.tokens.map(t => t.lower || t.toLower?.() || t);
+
+        const hasIf = tokens.includes("if");
+
+        if (!hasIf) return;
+
+        /* ==================================================
+           BASIC STRUCTURAL CHECK ONLY
+        ================================================== */
+
+        const hasPast = this.containsPastMarkers(tokens);
+        const hasFuture = tokens.includes("will");
+
+        const hasHave = tokens.includes("had");
+
+        /* ==================================================
+           ZERO / FIRST / SECOND / THIRD (heuristic only)
+        ================================================== */
+
+        if (hasIf) {
+
+            // weak heuristic classification
+
+            if (hasHave && hasPast) {
+                a.grammarSignals.conditionalIssue = true;
+                return;
+            }
+
+            if (hasPast && hasFuture) {
+                a.grammarSignals.conditionalIssue = true;
+                return;
+            }
+
+            if (hasIf && !a.subject) {
+                a.grammarSignals.conditionalIssue = true;
+                return;
+            }
+        }
+    }
+
+    /* ======================================================
+       SIMPLE PAST DETECTION (heuristic)
+    ====================================================== */
+
+    containsPastMarkers(tokens) {
+
+        const pastMarkers = [
+            "was","were","did","had",
+            "went","ate","saw","took"
+        ];
+
+        return tokens.some(t => pastMarkers.includes(t));
+    }
 }
 
 /* ==========================================================
-   Zero Conditional
+   EXPORT
 ========================================================== */
 
-addConditionalRule({
-    description: "Zero conditional: If + present simple, present simple",
-    condition: (sentence, context) => context.type === "zeroConditional" && !sentence.isCorrectZeroConditional,
-    correction: (sentence) => sentence.toZeroConditional()
-});
-
-/* ==========================================================
-   First Conditional
-========================================================== */
-
-addConditionalRule({
-    description: "First conditional: If + present simple, will + base verb",
-    condition: (sentence, context) => context.type === "firstConditional" && !sentence.isCorrectFirstConditional,
-    correction: (sentence) => sentence.toFirstConditional()
-});
-
-/* ==========================================================
-   Second Conditional
-========================================================== */
-
-addConditionalRule({
-    description: "Second conditional: If + past simple, would + base verb",
-    condition: (sentence, context) => context.type === "secondConditional" && !sentence.isCorrectSecondConditional,
-    correction: (sentence) => sentence.toSecondConditional()
-});
-
-/* ==========================================================
-   Third Conditional
-========================================================== */
-
-addConditionalRule({
-    description: "Third conditional: If + past perfect, would have + past participle",
-    condition: (sentence, context) => context.type === "thirdConditional" && !sentence.isCorrectThirdConditional,
-    correction: (sentence) => sentence.toThirdConditional()
-});
-
-/* ==========================================================
-   Mixed Conditional
-========================================================== */
-
-addConditionalRule({
-    description: "Mixed conditional: If + past perfect, would + base verb (present result)",
-    condition: (sentence, context) => context.type === "mixedConditional" && !sentence.isCorrectMixedConditional,
-    correction: (sentence) => sentence.toMixedConditional()
-});
-
-/* ==========================================================
-   Register Rules
-========================================================== */
-
-GrammarEngine.registerRules(
-    "conditionalRules",
-    conditionalRules
-);
-
-window.conditionalRules = conditionalRules;
+module.exports = ConditionalRules;
