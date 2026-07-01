@@ -158,10 +158,36 @@ class Corrector {
 }
 
 /* ==========================================================
-   Singleton
+   SINGLETON
 ========================================================== */
 
 const corrector = new Corrector();
 
+/* ==========================================================
+   EXPORT
+========================================================== */
+
 window.corrector = corrector;
 window.Corrector = Corrector;
+
+/* ==========================================================
+   REGISTER TO GRAMMAR ENGINE
+========================================================== */
+
+if (
+    window.GrammarEngine &&
+    typeof window.GrammarEngine.registerManager === "function"
+) {
+
+    window.GrammarEngine.registerManager(
+        "corrector",
+        corrector
+    );
+
+    console.log("[Corrector] Registered successfully.");
+
+} else {
+
+    console.warn("[Corrector] GrammarEngine is not available.");
+
+}
