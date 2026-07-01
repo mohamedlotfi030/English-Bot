@@ -2,63 +2,81 @@
 
 /* ==========================================================
    English-Bot
-   Collocation Rules
-   Version 5.0
+   Collocation Rules v7
+   - Semantic + signal-based architecture
 ========================================================== */
 
-const collocationRules = [];
+class CollocationRules {
 
-/* ==========================================================
-   Rule Registration
-========================================================== */
+    apply(analysis) {
 
-function addCollocationRule({
-    description,
-    condition,
-    correction
-}) {
-    collocationRules.push({
-        description,
-        condition,
-        correction
-    });
+        if (!analysis || !analysis.grammarSignals) return analysis;
+
+        this.validateMakeDoPairs(analysis);
+        this.validateTakeHavePairs(analysis);
+
+        return analysis;
+    }
+
+    /* ======================================================
+       1. MAKE / DO PAIRS
+    ====================================================== */
+
+    validateMakeDoPairs(a) {
+
+        const tokens = a.tokens.map(t => t.lower || t.toLower?.() || t);
+
+        const hasMake = tokens.includes("make");
+        const hasDo = tokens.includes("do");
+
+        const nouns = a.nouns.map(n => n.lower || n.toLower?.() || n);
+
+        const makeSet = ["decision","effort","mistake"];
+        const doSet = ["homework","exercise","research"];
+
+        for (const noun of nouns) {
+
+            if (makeSet.includes(noun) && hasDo) {
+                a.grammarSignals.collocationIssue = true;
+            }
+
+            if (doSet.includes(noun) && hasMake) {
+                a.grammarSignals.collocationIssue = true;
+            }
+        }
+    }
+
+    /* ======================================================
+       2. TAKE / HAVE PAIRS
+    ====================================================== */
+
+    validateTakeHavePairs(a) {
+
+        const tokens = a.tokens.map(t => t.lower || t.toLower?.() || t);
+
+        const nouns = a.nouns.map(n => n.lower || n.toLower?.() || n);
+
+        const takeSet = ["break","photo","risk"];
+        const haveSet = ["lunch","dinner","shower"];
+
+        const hasTake = tokens.includes("take");
+        const hasHave = tokens.includes("have");
+
+        for (const noun of nouns) {
+
+            if (takeSet.includes(noun) && !hasTake) {
+                a.grammarSignals.collocationIssue = true;
+            }
+
+            if (haveSet.includes(noun) && !hasHave) {
+                a.grammarSignals.collocationIssue = true;
+            }
+        }
+    }
 }
 
 /* ==========================================================
-   Common Collocations
+   EXPORT
 ========================================================== */
 
-addCollocationRule({
-    description: "Use 'make' with nouns like decision, effort, mistake",
-    condition: (verb, noun) => verb.base === "do" && ["decision","effort","mistake"].includes(noun),
-    correction: () => "make"
-});
-
-addCollocationRule({
-    description: "Use 'do' with activities like homework, exercise, research",
-    condition: (verb, noun) => verb.base === "make" && ["homework","exercise","research"].includes(noun),
-    correction: () => "do"
-});
-
-addCollocationRule({
-    description: "Use 'take' with nouns like break, photo, risk",
-    condition: (verb, noun) => !["take"].includes(verb.base) && ["break","photo","risk"].includes(noun),
-    correction: () => "take"
-});
-
-addCollocationRule({
-    description: "Use 'have' with nouns like lunch, dinner, shower",
-    condition: (verb, noun) => !["have"].includes(verb.base) && ["lunch","dinner","shower"].includes(noun),
-    correction: () => "have"
-});
-
-/* ==========================================================
-   Register Rules
-========================================================== */
-
-GrammarEngine.registerRules(
-    "collocationRules",
-    collocationRules
-);
-
-window.collocationRules = collocationRules;
+module.exports = CollocationRules;
