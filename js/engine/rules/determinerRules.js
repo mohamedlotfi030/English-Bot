@@ -2,117 +2,92 @@
 
 /* ==========================================================
    English-Bot
-   Determiner Rules v7
-   - NP-level validation only
+   Determiner Rules v9 (Production Ready)
+   - Rule-based architecture
+   - Handles Demonstratives & Quantifiers
 ========================================================== */
 
-class DeterminerRules {
+/**
+ * Rule: Demonstrative Agreement (This/These)
+ */
+const demonstrative_rule = new GrammarRule({
+    id: "determiner_demonstrative_rule",
+    name: "Demonstrative Agreement",
+    category: GrammarCategory.DETERMINER,
+    severity: GrammarSeverity.ERROR,
+    priority: 30,
+    enabled: true,
 
-    apply(analysis) {
+    test(text, analysis, tokens) {
+        if (!analysis.nouns || analysis.nouns.length === 0) return false;
+        
+        const tokenList = tokens.map(t => t.lower);
+        const hasThis = tokenList.includes("this");
+        const hasThese = tokenList.includes("these");
+        const isPlural = analysis.nouns.length > 1;
 
-        if (!analysis || !analysis.grammarSignals) return analysis;
+        return (hasThis && isPlural) || (hasThese && !isPlural);
+    },
 
-        this.validateArticles(analysis);
-        this.validateDemonstratives(analysis);
-        this.validateQuantifiers(analysis);
-
-        return analysis;
+    fix(text, analysis, tokens) {
+        const isPlural = analysis.nouns.length > 1;
+        const correct = isPlural ? "these" : "this";
+        const wrong = isPlural ? "this" : "these";
+        
+        const newText = text.replace(new RegExp(`\\b${wrong}\\b`, 'gi'), correct);
+        
+        return {
+            text: newText,
+            issue: true,
+            reason: `Use '${correct}' with ${isPlural ? 'plural' : 'singular'} nouns.`
+        };
     }
+});
 
-    /* ======================================================
-       1. ARTICLE VALIDATION
-    ====================================================== */
-
-    validateArticles(a) {
-
-        const articles = a.articles || [];
-        const nouns = a.nouns || [];
-
-        if (!articles.length || !nouns.length) return;
-
-        const article = articles[0].lower;
-        const noun = nouns[0].lower;
-
-        const startsWithVowel = /^[aeiou]/.test(noun);
-
-        if (article === "a" && startsWithVowel) {
-            a.grammarSignals.articleIssue = true;
-        }
-
-        if (article === "an" && !startsWithVowel) {
-            a.grammarSignals.articleIssue = true;
-        }
-    }
-
-    /* ======================================================
-       2. DEMONSTRATIVE VALIDATION (STRUCTURAL ONLY)
-    ====================================================== */
-
-    validateDemonstratives(a) {
-
-        const tokens = a.tokens.map(t => t.lower);
-
-        const hasThis = tokens.includes("this");
-        const hasThese = tokens.includes("these");
-
-        const nouns = a.nouns || [];
-
-        if (!nouns.length) return;
-
-        const isPlural = nouns.length > 1;
-
-        if (hasThis && isPlural) {
-            a.grammarSignals.determinerIssue = true;
-        }
-
-        if (hasThese && !isPlural) {
-            a.grammarSignals.determinerIssue = true;
-        }
-    }
-
-    /* ======================================================
-       3. QUANTIFIER VALIDATION (LIGHT WEIGHT)
-    ====================================================== */
-
-    validateQuantifiers(a) {
-
-        const tokens = a.tokens.map(t => t.lower);
-
-        const hasMuch = tokens.includes("much");
-        const hasMany = tokens.includes("many");
-
-        const nouns = a.nouns || [];
-
-        if (!nouns.length) return;
-
-        const isUncountable = this.isUncountable(nouns[0]);
-
-        if (hasMuch && !isUncountable) {
-            a.grammarSignals.countableIssue = true;
-        }
-
-        if (hasMany && isUncountable) {
-            a.grammarSignals.countableIssue = true;
-        }
-    }
-
-    /* ======================================================
-       MINIMAL LEXICON
-    ====================================================== */
+/**
+ * Rule: Quantifier Agreement (Much/Many)
+ */
+const quantifier_rule = new GrammarRule({
+    id: "determiner_quantifier_rule",
+    name: "Quantifier Agreement",
+    category: GrammarCategory.DETERMINER,
+    severity: GrammarSeverity.ERROR,
+    priority: 30,
+    enabled: true,
 
     isUncountable(noun) {
+        const list = ["water", "milk", "rice", "air", "information", "advice", "money"];
+        return list.includes(noun.toLowerCase());
+    },
 
-        const list = [
-            "water","milk","rice","air",
-            "information","advice","money"
-        ];
+    test(text, analysis, tokens) {
+        if (!analysis.nouns || analysis.nouns.length === 0) return false;
+        
+        const tokenList = tokens.map(t => t.lower);
+        const hasMuch = tokenList.includes("much");
+        const hasMany = tokenList.includes("many");
+        const isUncountable = this.isUncountable(analysis.nouns[0].lower);
 
-        return list.includes(noun.lower || noun);
+        return (hasMuch && !isUncountable) || (hasMany && isUncountable);
+    },
+
+    fix(text, analysis, tokens) {
+        const hasMuch = tokens.some(t => t.lower === "much");
+        const newText = hasMuch ? text.replace(/\bmuch\b/gi, "many") : text.replace(/\bmany\b/gi, "much");
+        
+        return {
+            text: newText,
+            issue: true,
+            reason: "Use 'much' for uncountable nouns and 'many' for countable nouns."
+        };
     }
-}
+});
 
 /* ==========================================================
-   EXPORT
+   REGISTRATION
 ========================================================== */
 
-module.exports = DeterminerRules;
+GrammarEngine.registerRules([
+    demonstrative_rule,
+    quantifier_rule
+]);
