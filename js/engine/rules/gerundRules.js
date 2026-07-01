@@ -2,86 +2,75 @@
 
 /* ==========================================================
    English-Bot
-   Gerund Rules v7
-   - Syntax constraint validation only
+   Gerund Rules v9 (Production Ready)
+   - Rule-based architecture
+   - Handles Preposition+Gerund and Verb+Gerund patterns
 ========================================================== */
 
-class GerundRules {
+/**
+ * Rule: Preposition + Gerund
+ * Validates that verbs following prepositions are in gerund (-ing) form.
+ */
+const preposition_gerund_rule = new GrammarRule({
+    id: "prep_gerund_rule",
+    name: "Preposition + Gerund",
+    category: GrammarCategory.GERUND,
+    severity: GrammarSeverity.ERROR,
+    priority: 30,
+    enabled: true,
 
-    apply(analysis) {
+    test(text, analysis, tokens) {
+        if (!analysis.prepositions || analysis.prepositions.length === 0) return false;
+        if (!analysis.verbs || analysis.verbs.length === 0) return false;
 
-        if (!analysis || !analysis.grammarSignals) return analysis;
+        return analysis.verbs.some(v => !v.lower.endsWith("ing"));
+    },
 
-        this.validateGerundUsage(analysis);
-
-        return analysis;
+    fix(text, analysis, tokens) {
+        return {
+            text: text, // المحرك سيقوم بتطبيق التصحيح التحويلي
+            issue: true,
+            reason: "Verbs after prepositions should be in gerund form (ending in -ing)."
+        };
     }
+});
 
-    /* ======================================================
-       GERUND VALIDATION ONLY
-    ====================================================== */
+/**
+ * Rule: Verb + Gerund Pattern
+ * Detects verbs that require a gerund instead of an infinitive.
+ */
+const verb_gerund_rule = new GrammarRule({
+    id: "verb_gerund_rule",
+    name: "Verb + Gerund Pattern",
+    category: GrammarCategory.GERUND,
+    severity: GrammarSeverity.ERROR,
+    priority: 30,
+    enabled: true,
 
-    validateGerundUsage(a) {
+    test(text, analysis, tokens) {
+        const triggerVerbs = ["enjoy", "avoid", "suggest", "consider", "finish", "stop", "mind"];
+        const tokenList = tokens.map(t => t.lower);
+        
+        const hasTrigger = tokenList.some(t => triggerVerbs.includes(t));
+        const hasInfinitive = tokenList.includes("to");
 
-        const tokens = a.tokens.map(t => t.lower || t.toLower?.() || t);
+        return hasTrigger && hasInfinitive;
+    },
 
-        const verbs = a.verbs || [];
-
-        const prepositions = a.prepositions || [];
-
-        const triggerVerbs = [
-            "enjoy","avoid","suggest","consider","finish","stop","mind"
-        ];
-
-        /* ==================================================
-           AFTER PREPOSITION → GERUND EXPECTATION
-        ================================================== */
-
-        if (prepositions.length > 0 && verbs.length > 0) {
-
-            for (const verb of verbs) {
-
-                const v = verb.lower || verb;
-
-                if (!v.endsWith("ing") && !v.startsWith("to ")) {
-                    a.grammarSignals.gerundIssue = true;
-                }
-            }
-        }
-
-        /* ==================================================
-           VERB COMPLEMENT PATTERN
-        ================================================== */
-
-        const hasTriggerVerb = tokens.some(t =>
-            triggerVerbs.includes(t)
-        );
-
-        if (hasTriggerVerb) {
-
-            const hasInfinitive = tokens.includes("to");
-
-            if (hasInfinitive) {
-                a.grammarSignals.gerundIssue = true;
-            }
-        }
-
-        /* ==================================================
-           SIMPLE HEURISTIC FLAG
-        ================================================== */
-
-        const ingCount = verbs.filter(v =>
-            (v.lower || v).endsWith("ing")
-        ).length;
-
-        if (ingCount > 1) {
-            a.grammarSignals.gerundComplexity = true;
-        }
+    fix(text, analysis, tokens) {
+        return {
+            text: text,
+            issue: true,
+            reason: "This verb is followed by a gerund (-ing), not an infinitive (to...)."
+        };
     }
-}
+});
 
 /* ==========================================================
-   EXPORT
+   REGISTRATION
 ========================================================== */
 
-module.exports = GerundRules;
+GrammarEngine.registerRules([
+    preposition_gerund_rule,
+    verb_gerund_rule
+]);
