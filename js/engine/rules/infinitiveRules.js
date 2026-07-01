@@ -2,75 +2,79 @@
 
 /* ==========================================================
    English-Bot
-   Infinitive Rules
-   Version 5.0
+   Infinitive Rules v7
+   - Constraint detection only
 ========================================================== */
 
-const infinitiveRules = [];
+class InfinitiveRules {
 
-/* ==========================================================
-   Rule Registration
-========================================================== */
+    apply(analysis) {
 
-function addInfinitiveRule({
-    description,
-    condition,
-    correction
-}) {
-    infinitiveRules.push({
-        description,
-        condition,
-        correction
-    });
+        if (!analysis || !analysis.grammarSignals) return analysis;
+
+        this.detectInfinitivePatterns(analysis);
+
+        return analysis;
+    }
+
+    /* ======================================================
+       CORE DETECTION ONLY
+    ====================================================== */
+
+    detectInfinitivePatterns(a) {
+
+        const tokens = a.tokens.map(t => t.lower);
+
+        const verbs = a.verbs || [];
+
+        const modals = a.modals || [];
+
+        const triggerVerbs = [
+            "want","decide","plan","hope","try","need","agree"
+        ];
+
+        /* ==================================================
+           AFTER TRIGGER VERB → INFINITIVE EXPECTED
+        ================================================== */
+
+        if (tokens.some(t => triggerVerbs.includes(t))) {
+
+            if (!tokens.includes("to")) {
+                a.grammarSignals.infinitiveIssue = true;
+            }
+        }
+
+        /* ==================================================
+           MODAL + BARE VERB CHECK
+        ================================================== */
+
+        if (modals.length > 0) {
+
+            const hasToAfterModal = tokens.includes("to");
+
+            if (hasToAfterModal) {
+                a.grammarSignals.modalInfinitiveError = true;
+            }
+        }
+
+        /* ==================================================
+           GERUND vs INFINITIVE CONFLICT SIGNAL
+        ================================================== */
+
+        const hasIng = verbs.some(v =>
+            (v.lower || v).endsWith("ing")
+        );
+
+        const hasToVerb = tokens.includes("to");
+
+        if (hasIng && hasToVerb) {
+            a.grammarSignals.formConflict = true;
+        }
+    }
 }
 
 /* ==========================================================
-   Infinitive after Certain Verbs
+   EXPORT
 ========================================================== */
 
-addInfinitiveRule({
-    description: "Use infinitive (to + verb) after verbs like want, decide, plan, hope",
-    condition: (word, context) => context.afterVerb && ["want","decide","plan","hope"].includes(context.verb) && word.isVerbBase,
-    correction: (word) => "to " + word
-});
-
-/* ==========================================================
-   Infinitive of Purpose
-========================================================== */
-
-addInfinitiveRule({
-    description: "Use infinitive to express purpose (in order to)",
-    condition: (sentence, context) => context.isPurpose && !sentence.hasInfinitive,
-    correction: (sentence) => sentence.addInfinitivePurpose()
-});
-
-/* ==========================================================
-   Infinitive vs Gerund Distinction
-========================================================== */
-
-addInfinitiveRule({
-    description: "Correct use of infinitive vs gerund depending on verb",
-    condition: (word, context) => context.afterVerb && context.requiresInfinitive && word.isGerund,
-    correction: (word) => "to " + word.replace("ing","")
-});
-
-/* ==========================================================
-   Bare Infinitive after Modals
-========================================================== */
-
-addInfinitiveRule({
-    description: "Use bare infinitive (without 'to') after modal verbs (can, should, must)",
-    condition: (word, context) => context.afterModal && word.startsWith("to "),
-    correction: (word) => word.replace("to ","")
-});
-
-/* ==========================================================
-   Register Rules
-========================================================== */
-
-GrammarEngine.registerRules(
-    "infinitiveRules",
-    infinitiveRules
-);
-
-window.infinitiveRules = infinitiveRules;
+module.exports = InfinitiveRules;
