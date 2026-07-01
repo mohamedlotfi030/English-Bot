@@ -2,101 +2,98 @@
 
 /* ==========================================================
    English-Bot
-   Preposition Rules
-   Version 5.0
+   Preposition Engine v7
+   Relational grammar system (NOT word replacement)
 ========================================================== */
 
-const prepositionRules = [];
+class PrepositionEngine {
 
-/* ==========================================================
-   Rule Registration
-========================================================== */
+    apply(analysis) {
 
-function addPrepositionRule({
-    description,
-    condition,
-    correction
-}) {
-    prepositionRules.push({
-        description,
-        condition,
-        correction
-    });
+        if (!analysis) return analysis;
+
+        this.resolveTemporalRelations(analysis);
+        this.resolveSpatialRelations(analysis);
+        this.resolveDirectionalRelations(analysis);
+
+        return analysis;
+    }
+
+    /* ======================================================
+       TEMPORAL SYSTEM
+    ====================================================== */
+
+    resolveTemporalRelations(a) {
+
+        const time = a.timeExpressions || [];
+
+        for (const t of time) {
+
+            if (t.isSpecificTime) {
+                t.preposition = "at";
+            }
+
+            else if (t.isDay || t.isDate) {
+                t.preposition = "on";
+            }
+
+            else if (t.isLongPeriod) {
+                t.preposition = "in";
+            }
+        }
+    }
+
+    /* ======================================================
+       SPATIAL SYSTEM
+    ====================================================== */
+
+    resolveSpatialRelations(a) {
+
+        const places = a.nouns?.filter(n => n.isLocation) || [];
+
+        for (const p of places) {
+
+            if (p.isEnclosedSpace) {
+                p.preposition = "in";
+            }
+
+            else if (p.isSurface) {
+                p.preposition = "on";
+            }
+
+            else if (p.isPointLocation) {
+                p.preposition = "at";
+            }
+        }
+    }
+
+    /* ======================================================
+       DIRECTIONAL SYSTEM
+    ====================================================== */
+
+    resolveDirectionalRelations(a) {
+
+        const verbs = a.verbs || [];
+
+        for (const v of verbs) {
+
+            if (v.isMotionVerb) {
+
+                v.preposition = this.resolveMotionPreposition(v);
+            }
+        }
+    }
+
+    resolveMotionPreposition(verb) {
+
+        if (verb.target?.isEnclosedSpace) return "into";
+        if (verb.target?.isSurface) return "onto";
+        return "to";
+    }
 }
 
 /* ==========================================================
-   Time Prepositions
+   EXPORT
 ========================================================== */
 
-addPrepositionRule({
-    description: "Use 'at' with specific times",
-    condition: (prep, context) => context.type === "time" && context.isSpecific && prep !== "at",
-    correction: () => "at"
-});
-
-addPrepositionRule({
-    description: "Use 'on' with days and dates",
-    condition: (prep, context) => context.type === "time" && context.isDayOrDate && prep !== "on",
-    correction: () => "on"
-});
-
-addPrepositionRule({
-    description: "Use 'in' with months, years, centuries, long periods",
-    condition: (prep, context) => context.type === "time" && context.isLongPeriod && prep !== "in",
-    correction: () => "in"
-});
-
-/* ==========================================================
-   Place Prepositions
-========================================================== */
-
-addPrepositionRule({
-    description: "Use 'in' for enclosed spaces or countries/cities",
-    condition: (prep, context) => context.type === "place" && context.isEnclosed && prep !== "in",
-    correction: () => "in"
-});
-
-addPrepositionRule({
-    description: "Use 'on' for surfaces",
-    condition: (prep, context) => context.type === "place" && context.isSurface && prep !== "on",
-    correction: () => "on"
-});
-
-addPrepositionRule({
-    description: "Use 'at' for specific points or addresses",
-    condition: (prep, context) => context.type === "place" && context.isPoint && prep !== "at",
-    correction: () => "at"
-});
-
-/* ==========================================================
-   Direction Prepositions
-========================================================== */
-
-addPrepositionRule({
-    description: "Use 'to' for movement toward a destination",
-    condition: (prep, context) => context.type === "direction" && context.isDestination && prep !== "to",
-    correction: () => "to"
-});
-
-addPrepositionRule({
-    description: "Use 'into' for movement inside an enclosed space",
-    condition: (prep, context) => context.type === "direction" && context.isEnclosed && prep !== "into",
-    correction: () => "into"
-});
-
-addPrepositionRule({
-    description: "Use 'onto' for movement onto a surface",
-    condition: (prep, context) => context.type === "direction" && context.isSurface && prep !== "onto",
-    correction: () => "onto"
-});
-
-/* ==========================================================
-   Register Rules
-========================================================== */
-
-GrammarEngine.registerRules(
-    "prepositionRules",
-    prepositionRules
-);
-
-window.prepositionRules = prepositionRules;
+module.exports = PrepositionEngine;
