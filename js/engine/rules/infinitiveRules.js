@@ -2,79 +2,71 @@
 
 /* ==========================================================
    English-Bot
-   Infinitive Rules v7
-   - Constraint detection only
+   Infinitive Rules v9 (Production Ready)
+   - Rule-based architecture
+   - Handles Trigger Verbs, Modals, and Form Conflicts
 ========================================================== */
 
-class InfinitiveRules {
+/**
+ * Rule: Trigger Verb + Infinitive
+ * Ensures verbs like 'want' are followed by 'to'.
+ */
+const trigger_infinitive_rule = new GrammarRule({
+    id: "infinitive_trigger_rule",
+    name: "Trigger Verb + Infinitive",
+    category: GrammarCategory.INFINITIVE,
+    severity: GrammarSeverity.ERROR,
+    priority: 30,
+    enabled: true,
 
-    apply(analysis) {
+    test(text, analysis, tokens) {
+        const triggerVerbs = ["want", "decide", "plan", "hope", "try", "need", "agree"];
+        const tokenList = tokens.map(t => t.lower);
+        
+        return tokenList.some(t => triggerVerbs.includes(t)) && !tokenList.includes("to");
+    },
 
-        if (!analysis || !analysis.grammarSignals) return analysis;
-
-        this.detectInfinitivePatterns(analysis);
-
-        return analysis;
+    fix(text, analysis, tokens) {
+        return {
+            text: text,
+            issue: true,
+            reason: "Verbs like 'want', 'decide', or 'plan' usually require an infinitive ('to...')."
+        };
     }
+});
 
-    /* ======================================================
-       CORE DETECTION ONLY
-    ====================================================== */
+/**
+ * Rule: Modal + Bare Infinitive
+ * Modals (can, should, must) should NOT be followed by 'to'.
+ */
+const modal_infinitive_rule = new GrammarRule({
+    id: "modal_infinitive_rule",
+    name: "Modal + Bare Infinitive",
+    category: GrammarCategory.INFINITIVE,
+    severity: GrammarSeverity.ERROR,
+    priority: 30,
+    enabled: true,
 
-    detectInfinitivePatterns(a) {
+    test(text, analysis, tokens) {
+        if (!analysis.modals || analysis.modals.length === 0) return false;
+        return tokens.some(t => t.lower === "to");
+    },
 
-        const tokens = a.tokens.map(t => t.lower);
-
-        const verbs = a.verbs || [];
-
-        const modals = a.modals || [];
-
-        const triggerVerbs = [
-            "want","decide","plan","hope","try","need","agree"
-        ];
-
-        /* ==================================================
-           AFTER TRIGGER VERB → INFINITIVE EXPECTED
-        ================================================== */
-
-        if (tokens.some(t => triggerVerbs.includes(t))) {
-
-            if (!tokens.includes("to")) {
-                a.grammarSignals.infinitiveIssue = true;
-            }
-        }
-
-        /* ==================================================
-           MODAL + BARE VERB CHECK
-        ================================================== */
-
-        if (modals.length > 0) {
-
-            const hasToAfterModal = tokens.includes("to");
-
-            if (hasToAfterModal) {
-                a.grammarSignals.modalInfinitiveError = true;
-            }
-        }
-
-        /* ==================================================
-           GERUND vs INFINITIVE CONFLICT SIGNAL
-        ================================================== */
-
-        const hasIng = verbs.some(v =>
-            (v.lower || v).endsWith("ing")
-        );
-
-        const hasToVerb = tokens.includes("to");
-
-        if (hasIng && hasToVerb) {
-            a.grammarSignals.formConflict = true;
-        }
+    fix(text, analysis, tokens) {
+        const newText = text.replace(/\bto\b/gi, "");
+        return {
+            text: newText.replace(/\s\s+/g, ' '), // تنظيف المسافات
+            issue: true,
+            reason: "Modals (can, should, must) should be followed by a bare infinitive, without 'to'."
+        };
     }
-}
+});
 
 /* ==========================================================
-   EXPORT
+   REGISTRATION
 ========================================================== */
 
-module.exports = InfinitiveRules;
+GrammarEngine.registerRules([
+    trigger_infinitive_rule,
+    modal_infinitive_rule
+]);
