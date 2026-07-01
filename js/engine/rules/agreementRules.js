@@ -2,156 +2,72 @@
 
 /* ==========================================================
    English-Bot
-   Agreement Rules
-   Version 6.0
+   Agreement Rules v7
+   - Signal-based architecture
 ========================================================== */
 
-const agreementRules = [];
+class AgreementRules {
 
-/* ==========================================================
-   Helper
-========================================================== */
+    apply(analysis) {
 
-function addAgreementRule(rule) {
+        if (!analysis || !analysis.grammarSignals) return analysis;
 
-    agreementRules.push(rule);
+        this.detectSubjectVerbAgreement(analysis);
 
+        return analysis;
+    }
+
+    /* ======================================================
+       CORE AGREEMENT LOGIC (single unified engine)
+    ====================================================== */
+
+    detectSubjectVerbAgreement(a) {
+
+        const subject = a.subject?.toLowerCase?.() || a.subject;
+        const verb = a.verbForm?.toLowerCase?.() || "";
+
+        if (!subject || !verb) return;
+
+        /* ==================================================
+           I + am
+        ================================================== */
+
+        if (subject === "i") {
+            if (verb === "is" || verb === "are") {
+                a.grammarSignals.agreementViolation = true;
+                a.grammarSignals.sentenceIssue = true;
+                return;
+            }
+        }
+
+        /* ==================================================
+           HE / SHE / IT + is
+        ================================================== */
+
+        if (["he","she","it"].includes(subject)) {
+            if (verb === "are") {
+                a.grammarSignals.agreementViolation = true;
+                a.grammarSignals.sentenceIssue = true;
+                return;
+            }
+        }
+
+        /* ==================================================
+           WE / YOU / THEY + are
+        ================================================== */
+
+        if (["we","you","they"].includes(subject)) {
+            if (verb === "is" || verb === "am") {
+                a.grammarSignals.agreementViolation = true;
+                a.grammarSignals.sentenceIssue = true;
+                return;
+            }
+        }
+    }
 }
 
 /* ==========================================================
-   I + am
+   EXPORT
 ========================================================== */
 
-addAgreementRule({
-
-    id: "agreement_i_am",
-
-    name: "I takes am",
-
-    category: GrammarCategory.AGREEMENT,
-
-    description: "Use am with I",
-
-    priority: 10,
-
-    test(sentence, analysis) {
-
-        return /^i\s+is\b/i.test(sentence);
-
-    },
-
-    fix(sentence) {
-
-        return {
-
-            text: sentence.replace(/^i\s+is\b/i, "I am"),
-
-            issue: true,
-
-            reason: "I must use am."
-
-        };
-
-    }
-
-});
-
-/* ==========================================================
-   He / She / It + is
-========================================================== */
-
-addAgreementRule({
-
-    id: "agreement_is",
-
-    name: "Singular be",
-
-    category: GrammarCategory.AGREEMENT,
-
-    description: "Singular subject takes is",
-
-    priority: 20,
-
-    test(sentence) {
-
-        return /^(he|she|it)\s+are\b/i.test(sentence);
-
-    },
-
-    fix(sentence) {
-
-        return {
-
-            text: sentence.replace(
-
-                /^(he|she|it)\s+are\b/i,
-
-                "$1 is"
-
-            ),
-
-            issue: true,
-
-            reason: "Singular subject requires is."
-
-        };
-
-    }
-
-});
-
-/* ==========================================================
-   We / You / They + are
-========================================================== */
-
-addAgreementRule({
-
-    id: "agreement_are",
-
-    name: "Plural be",
-
-    category: GrammarCategory.AGREEMENT,
-
-    description: "Plural subject takes are",
-
-    priority: 30,
-
-    test(sentence) {
-
-        return /^(we|you|they)\s+is\b/i.test(sentence);
-
-    },
-
-    fix(sentence) {
-
-        return {
-
-            text: sentence.replace(
-
-                /^(we|you|they)\s+is\b/i,
-
-                "$1 are"
-
-            ),
-
-            issue: true,
-
-            reason: "Plural subject requires are."
-
-        };
-
-    }
-
-});
-
-/* ==========================================================
-   Register
-========================================================== */
-
-GrammarEngine.registerRules(
-
-    agreementRules
-
-);
-
-window.agreementRules = agreementRules;
+module.exports = AgreementRules;
