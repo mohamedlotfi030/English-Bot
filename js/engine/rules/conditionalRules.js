@@ -2,84 +2,62 @@
 
 /* ==========================================================
    English-Bot
-   Conditional Rules v7
-   - Signal-based architecture
+   Conditional Rules v9 (Production Ready)
+   - Rule-based architecture
+   - Handles Conditional Tense mismatch
 ========================================================== */
 
-class ConditionalRules {
+/**
+ * Rule: Conditional Tense Consistency
+ * Detects common mismatches in conditional sentences (e.g., Mixing Past/Future).
+ */
+const conditional_mismatch_rule = new GrammarRule({
+    id: "conditional_mismatch_rule",
+    name: "Conditional Tense Consistency",
+    category: GrammarCategory.TENSE,
+    severity: GrammarSeverity.ERROR,
+    priority: 30,
+    enabled: true,
 
-    apply(analysis) {
+    // Helper: دالة فحص علامات الماضي
+    containsPastMarkers(tokens) {
+        const pastMarkers = ["was", "were", "did", "had", "went", "ate", "saw", "took"];
+        return tokens.some(t => pastMarkers.includes(t.lower));
+    },
 
-        if (!analysis || !analysis.grammarSignals) return analysis;
-
-        this.validateConditionalStructure(analysis);
-
-        return analysis;
-    }
-
-    /* ======================================================
-       CORE CONDITIONAL DETECTION
-    ====================================================== */
-
-    validateConditionalStructure(a) {
-
-        const tokens = a.tokens.map(t => t.lower || t.toLower?.() || t);
-
-        const hasIf = tokens.includes("if");
-
-        if (!hasIf) return;
-
-        /* ==================================================
-           BASIC STRUCTURAL CHECK ONLY
-        ================================================== */
+    test(text, analysis, tokens) {
+        const tokenList = tokens.map(t => t.lower);
+        if (!tokenList.includes("if")) return false;
 
         const hasPast = this.containsPastMarkers(tokens);
-        const hasFuture = tokens.includes("will");
+        const hasFuture = tokenList.includes("will");
+        const hasHad = tokenList.includes("had");
 
-        const hasHave = tokens.includes("had");
+        // 1. مأزق PastPerfect مع ممارسات خاطئة
+        if (hasHad && hasPast && !tokenList.includes("would")) return true;
 
-        /* ==================================================
-           ZERO / FIRST / SECOND / THIRD (heuristic only)
-        ================================================== */
+        // 2. مأزق الخلط بين الماضي والمستقبل في الـ Conditional
+        if (hasPast && hasFuture) return true;
 
-        if (hasIf) {
+        // 3. التحقق من هيكل الجملة (الشرط يتطلب فاعل)
+        if (!analysis.subject) return true;
 
-            // weak heuristic classification
+        return false;
+    },
 
-            if (hasHave && hasPast) {
-                a.grammarSignals.conditionalIssue = true;
-                return;
-            }
-
-            if (hasPast && hasFuture) {
-                a.grammarSignals.conditionalIssue = true;
-                return;
-            }
-
-            if (hasIf && !a.subject) {
-                a.grammarSignals.conditionalIssue = true;
-                return;
-            }
-        }
+    fix(text, analysis, tokens) {
+        return {
+            text: text,
+            issue: true,
+            reason: "Check your conditional tense structure (e.g., consistency between 'if' clause and main clause)."
+        };
     }
-
-    /* ======================================================
-       SIMPLE PAST DETECTION (heuristic)
-    ====================================================== */
-
-    containsPastMarkers(tokens) {
-
-        const pastMarkers = [
-            "was","were","did","had",
-            "went","ate","saw","took"
-        ];
-
-        return tokens.some(t => pastMarkers.includes(t));
-    }
-}
+});
 
 /* ==========================================================
-   EXPORT
+   REGISTRATION
 ========================================================== */
 
-module.exports = ConditionalRules;
+GrammarEngine.registerRules([
+    conditional_mismatch_rule
+]);
