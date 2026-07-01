@@ -2,100 +2,103 @@
 
 /* ==========================================================
    English-Bot
-   Article Rules
-   Version 6.0
+   Article Rules v7
+   - Signal-based + phonology-aware heuristic
 ========================================================== */
 
-const articleRules = [];
+class ArticleRules {
 
-/* ==========================================================
-   Helper
-========================================================== */
+    apply(analysis) {
 
-function addArticleRule(rule) {
-    articleRules.push(rule);
+        if (!analysis || !analysis.grammarSignals) return analysis;
+
+        this.detectArticleErrors(analysis);
+
+        return analysis;
+    }
+
+    /* ======================================================
+       CORE ARTICLE VALIDATION
+    ====================================================== */
+
+    detectArticleErrors(a) {
+
+        const tokens = a.tokens.map(t => t.lower || t.toLower?.() || t);
+
+        for (let i = 0; i < tokens.length - 1; i++) {
+
+            const current = tokens[i];
+            const next = tokens[i + 1];
+
+            if (!current || !next) continue;
+
+            /* ==================================================
+               RULE 1: a + vowel sound heuristic
+            ================================================== */
+
+            if (current === "a") {
+
+                if (this.startsWithVowelSound(next)) {
+                    a.grammarSignals.articleError = true;
+                }
+            }
+
+            /* ==================================================
+               RULE 2: an + consonant sound heuristic
+            ================================================== */
+
+            if (current === "an") {
+
+                if (!this.startsWithVowelSound(next)) {
+                    a.grammarSignals.articleError = true;
+                }
+            }
+        }
+    }
+
+    /* ======================================================
+       PHONOLOGY APPROXIMATION LAYER
+       (IMPORTANT: not dictionary-based)
+    ====================================================== */
+
+    startsWithVowelSound(word) {
+
+        if (!word) return false;
+
+        const w = word.toLowerCase();
+
+        /* ==================================================
+           SPECIAL CASES (sound-based exceptions)
+        ================================================== */
+
+        const vowelSoundExceptions = [
+            "hour",
+            "honest",
+            "honor",
+            "heir"
+        ];
+
+        const consonantSoundExceptions = [
+            "university",
+            "user",
+            "unit",
+            "use",
+            "european"
+        ];
+
+        if (vowelSoundExceptions.includes(w)) return true;
+        if (consonantSoundExceptions.includes(w)) return false;
+
+        /* ==================================================
+           DEFAULT RULE (letter-based approximation)
+        ================================================== */
+
+        return /^[aeiou]/.test(w);
+    }
 }
 
 /* ==========================================================
-   a -> an
+   EXPORT
 ========================================================== */
 
-addArticleRule({
-
-    id: "article_a_to_an",
-
-    name: "Use an before vowel sound",
-
-    category: GrammarCategory.ARTICLE,
-
-    description: "Replace 'a' with 'an' before vowel sounds.",
-
-    priority: 10,
-
-    test(sentence) {
-
-        return /\ba\s+(apple|egg|elephant|orange|umbrella|hour|honest)\b/i.test(sentence);
-
-    },
-
-    fix(sentence) {
-
-        return {
-
-            text: sentence.replace(/\ba\b/i, "an"),
-
-            issue: true,
-
-            reason: "Use 'an' before vowel sounds."
-
-        };
-
-    }
-
-});
-
-/* ==========================================================
-   an -> a
-========================================================== */
-
-addArticleRule({
-
-    id: "article_an_to_a",
-
-    name: "Use a before consonant sound",
-
-    category: GrammarCategory.ARTICLE,
-
-    description: "Replace 'an' with 'a' before consonant sounds.",
-
-    priority: 20,
-
-    test(sentence) {
-
-        return /\ban\s+(book|car|dog|house|teacher|student)\b/i.test(sentence);
-
-    },
-
-    fix(sentence) {
-
-        return {
-
-            text: sentence.replace(/\ban\b/i, "a"),
-
-            issue: true,
-
-            reason: "Use 'a' before consonant sounds."
-
-        };
-
-    }
-
-});
-
-/* ==========================================================
-   Register
-========================================================== */
-
-GrammarEngine.registerRules(articleRules);
-
-window.articleRules = articleRules;
+module.exports = ArticleRules;
