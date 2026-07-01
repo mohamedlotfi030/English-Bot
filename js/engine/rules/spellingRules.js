@@ -2,134 +2,117 @@
 
 /* ==========================================================
    English-Bot
-   Spelling Rules
-   Version 7.0 (Clean Compatible)
+   Spelling Rules v9 (Production Ready)
+   - Rule-based architecture
+   - Handles morphological and orthographic adjustments
 ========================================================== */
 
-const spellingRules = [];
-
-/* ==========================================================
-   Helper
-========================================================== */
-
-function addSpellingRule(rule) {
-    spellingRules.push(rule);
-}
-
-/* ==========================================================
-   I before E Rule (Fixed Safe Version)
-========================================================== */
-
-addSpellingRule({
-    id: "spelling_ie_rule",
-    category: "SPELLING",
+/**
+ * Rule: I before E
+ */
+const spelling_ie_rule = new GrammarRule({
+    id: "spelling_ie",
+    name: "I before E Rule",
+    category: GrammarCategory.SPELLING,
+    severity: GrammarSeverity.WARNING,
     priority: 100,
+    enabled: true,
 
-    test(word) {
-        return typeof word === "string" && /cie/.test(word);
+    test(text, analysis, tokens) {
+        return tokens.some(t => /cie/i.test(t.text));
     },
 
-    fix(word) {
-        return {
-            text: word.replace(/cie/g, "cei"),
-            issue: true,
-            reason: "I before E rule correction"
-        };
+    fix(text, analysis, tokens) {
+        const newText = text.replace(/cie/gi, "cei");
+        return { text: newText, issue: true, reason: "Check 'I before E' rule." };
     }
 });
 
-/* ==========================================================
-   Double Consonant Rule
-========================================================== */
-
-addSpellingRule({
+/**
+ * Rule: Double Consonant before Suffix
+ */
+const spelling_double_consonant = new GrammarRule({
     id: "spelling_double_consonant",
-    category: "SPELLING",
+    name: "Double Consonant Rule",
+    category: GrammarCategory.SPELLING,
+    severity: GrammarSeverity.ERROR,
     priority: 90,
+    enabled: true,
 
-    test(word, context) {
-        return context?.addingSuffix &&
-               /[aeiou][bcdfghjklmnpqrstvwxyz]$/.test(word);
+    test(text, analysis, tokens) {
+        // التحقق من أن الكلمة الأخيرة تتبعها لاحقة وأنها تحتاج تضعيف
+        return analysis.addingSuffix && /[aeiou][bcdfghjklmnpqrstvwxyz]$/i.test(text);
     },
 
-    fix(word, context) {
-
-        const suffix = context?.suffix || "";
-
-        return {
-            text: word + word.slice(-1) + suffix,
-            issue: true,
-            reason: "Double consonant before suffix"
+    fix(text, analysis, tokens) {
+        const suffix = analysis.suffix || "";
+        const lastChar = text.slice(-1);
+        return { 
+            text: text + lastChar + suffix, 
+            issue: true, 
+            reason: "Double consonant before suffix." 
         };
     }
 });
 
-/* ==========================================================
-   Silent E Drop Rule
-========================================================== */
-
-addSpellingRule({
+/**
+ * Rule: Silent E Drop
+ */
+const spelling_silent_e = new GrammarRule({
     id: "spelling_silent_e",
-    category: "SPELLING",
+    name: "Silent E Drop Rule",
+    category: GrammarCategory.SPELLING,
+    severity: GrammarSeverity.ERROR,
     priority: 85,
+    enabled: true,
 
-    test(word, context) {
-        return context?.suffix === "ing" && word.endsWith("e");
+    test(text, analysis, tokens) {
+        return analysis.suffix === "ing" && text.toLowerCase().endsWith("e");
     },
 
-    fix(word) {
-        return {
-            text: word.slice(0, -1) + "ing",
-            issue: true
+    fix(text, analysis, tokens) {
+        return { 
+            text: text.slice(0, -1) + "ing", 
+            issue: true, 
+            reason: "Drop silent 'e' before 'ing'." 
         };
     }
 });
 
-/* ==========================================================
-   Plural Rules
-========================================================== */
-
-addSpellingRule({
-    id: "spelling_plural_ies",
-    category: "SPELLING",
+/**
+ * Rule: Plural Spelling (ies/es)
+ */
+const spelling_plural_rule = new GrammarRule({
+    id: "spelling_plural",
+    name: "Plural Spelling Rules",
+    category: GrammarCategory.SPELLING,
+    severity: GrammarSeverity.ERROR,
     priority: 80,
+    enabled: true,
 
-    test(word, context) {
-        return context?.isPlural &&
-               word.endsWith("y") &&
-               !/[aeiou]y$/.test(word);
+    test(text, analysis, tokens) {
+        if (!analysis.isPlural) return false;
+        return text.endsWith("y") || /(s|sh|ch|x|z)$/i.test(text);
     },
 
-    fix(word) {
-        return {
-            text: word.slice(0, -1) + "ies",
-            issue: true
-        };
-    }
-});
-
-
-addSpellingRule({
-    id: "spelling_plural_es",
-    category: "SPELLING",
-    priority: 70,
-
-    test(word, context) {
-        return context?.isPlural && /(s|sh|ch|x|z)$/.test(word);
-    },
-
-    fix(word) {
-        return {
-            text: word + "es",
-            issue: true
-        };
+    fix(text, analysis, tokens) {
+        let corrected = text;
+        if (text.endsWith("y") && !/[aeiou]y$/i.test(text)) {
+            corrected = text.slice(0, -1) + "ies";
+        } else if (/(s|sh|ch|x|z)$/i.test(text)) {
+            corrected = text + "es";
+        }
+        return { text: corrected, issue: true, reason: "Incorrect plural spelling." };
     }
 });
 
 /* ==========================================================
-   Register Rules
+   REGISTRATION
 ========================================================== */
 
-GrammarEngine.registerMany(spellingRules);
-
-window.spellingRules = spellingRules;
+GrammarEngine.registerRules([
+    spelling_ie_rule,
+    spelling_double_consonant,
+    spelling_silent_e,
+    spelling_plural_rule
+]);
