@@ -2,87 +2,89 @@
 
 /* ==========================================================
    English-Bot
-   Countable Rules
-   Version 5.0
+   Countable Rules v7
+   - Signal-based validation only
 ========================================================== */
 
-const countableRules = [];
+class CountableRules {
 
-/* ==========================================================
-   Rule Registration
-========================================================== */
+    apply(analysis) {
 
-function addCountableRule({
-    description,
-    condition,
-    correction
-}) {
-    countableRules.push({
-        description,
-        condition,
-        correction
-    });
+        if (!analysis || !analysis.grammarSignals) return analysis;
+
+        this.validateQuantifiers(analysis);
+
+        return analysis;
+    }
+
+    /* ======================================================
+       QUANTIFIER VALIDATION ONLY
+    ====================================================== */
+
+    validateQuantifiers(a) {
+
+        const tokens = a.tokens.map(t => t.lower || t.toLower?.() || t);
+
+        const hasMuch = tokens.includes("much");
+        const hasMany = tokens.includes("many");
+
+        const nouns = a.nouns || [];
+
+        for (const noun of nouns) {
+
+            const isUncountable = this.isUncountable(noun);
+
+            /* ==================================================
+               MUCH vs MANY SIGNAL
+            ================================================== */
+
+            if (hasMuch && !isUncountable) {
+                a.grammarSignals.countableIssue = true;
+            }
+
+            if (hasMany && isUncountable) {
+                a.grammarSignals.countableIssue = true;
+            }
+        }
+
+        /* ==================================================
+           ARTICLE SIGNAL (a/an misuse detection only)
+        ================================================== */
+
+        if (a.articles && a.articles.length > 0 && nouns.length > 0) {
+
+            const article = a.articles[0].lower;
+            const noun = nouns[0].lower;
+
+            const startsWithVowel = /^[aeiou]/.test(noun);
+
+            if (article === "a" && startsWithVowel) {
+                a.grammarSignals.articleIssue = true;
+            }
+
+            if (article === "an" && !startsWithVowel) {
+                a.grammarSignals.articleIssue = true;
+            }
+        }
+    }
+
+    /* ======================================================
+       BASIC LEXICON (minimal fallback)
+    ====================================================== */
+
+    isUncountable(noun) {
+
+        const uncountables = [
+            "water","milk","rice","air","information",
+            "advice","money","music"
+        ];
+
+        return uncountables.includes(noun.lower || noun);
+    }
 }
 
 /* ==========================================================
-   Articles with Countable Nouns
+   EXPORT
 ========================================================== */
 
-addCountableRule({
-    description: "Use 'a/an' with singular countable nouns",
-    condition: (word, context) => context.isCountable && context.isSingular && !word.hasArticle,
-    correction: (word) => (/[aeiou]/.test(word.charAt(0)) ? "an " : "a ") + word
-});
-
-/* ==========================================================
-   Plural for Countable Nouns
-========================================================== */
-
-addCountableRule({
-    description: "Add plural -s for countable nouns when needed",
-    condition: (word, context) => context.isCountable && context.isPlural && !word.isPluralForm,
-    correction: (word) => word + "s"
-});
-
-/* ==========================================================
-   Much vs Many
-========================================================== */
-
-addCountableRule({
-    description: "Use 'many' with countable nouns",
-    condition: (word, context) => context.isCountable && context.hasQuantifier && context.quantifier === "much",
-    correction: () => "many"
-});
-
-addCountableRule({
-    description: "Use 'much' with uncountable nouns",
-    condition: (word, context) => context.isUncountable && context.hasQuantifier && context.quantifier === "many",
-    correction: () => "much"
-});
-
-/* ==========================================================
-   Some/Any Usage
-========================================================== */
-
-addCountableRule({
-    description: "Use 'some' with plural countable or uncountable nouns in positive sentences",
-    condition: (sentence, context) => context.hasQuantifier && context.quantifier === "any" && context.isPositive,
-    correction: (sentence) => sentence.replace("any", "some")
-});
-
-addCountableRule({
-    description: "Use 'any' in negative or question sentences",
-    condition: (sentence, context) => context.hasQuantifier && context.quantifier === "some" && (context.isNegative || context.isQuestion),
-    correction: (sentence) => sentence.replace("some", "any")
-});
-
-/* ==========================================================
-   Register Rules
-========================================================== */
-
-GrammarEngine.registerRules(
-    "countableRules",
-    countableRules
-);
-
-window.countableRules = countableRules;
+module.exports = CountableRules;
