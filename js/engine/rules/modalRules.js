@@ -2,109 +2,77 @@
 
 /* ==========================================================
    English-Bot
-   Modal Rules v7
-   - Modal-Verb interaction validator only
+   Modal Rules v9 (Production Ready)
+   - Rule-based architecture
+   - Handles Modal Verb constraints
 ========================================================== */
 
-class ModalRules {
+/**
+ * Rule: Modal + Base Verb Constraint
+ * Modals must be followed by a base form verb (no -ing, no 'to').
+ */
+const modal_constraint_rule = new GrammarRule({
+    id: "modal_constraint_rule",
+    name: "Modal Verb Constraint",
+    category: GrammarCategory.MODAL,
+    severity: GrammarSeverity.ERROR,
+    priority: 30,
+    enabled: true,
 
-    apply(analysis) {
+    test(text, analysis, tokens) {
+        if (!analysis.modals || analysis.modals.length === 0) return false;
 
-        if (!analysis || !analysis.grammarSignals) return analysis;
+        return analysis.modals.some(m => {
+            const modal = m.lower;
+            const modalIndex = tokens.findIndex(t => t.lower === modal);
+            const nextToken = tokens[modalIndex + 1]?.lower;
 
-        this.validateModals(analysis);
+            if (!nextToken) return false;
+            // التحقق من الخطأ (وجود -ing أو to)
+            return nextToken.endsWith("ing") || nextToken === "to";
+        });
+    },
 
-        return analysis;
-    }
-
-    /* ======================================================
-       CORE VALIDATION ONLY
-    ====================================================== */
-
-    validateModals(a) {
-
-        const tokens = a.tokens.map(t => t.lower);
-
-        const modals = a.modals || [];
-
-        const verbs = a.verbs || [];
-
-        const modalSet = new Set([
-            "can","could",
-            "may","might",
-            "must","should",
-            "shall","will","would"
-        ]);
-
-        /* ==================================================
-           MODAL + VERB BASE CHECK
-        ================================================== */
-
-        for (const m of modals) {
-
-            const modal = m.lower || m;
-
-            const modalIndex = tokens.indexOf(modal);
-
-            const nextToken = tokens[modalIndex + 1];
-
-            if (!nextToken) continue;
-
-            /* ==========================================
-               AFTER MODAL MUST BE BASE VERB
-            ========================================== */
-
-            if (nextToken.endsWith("ing") || nextToken.startsWith("to ")) {
-                a.grammarSignals.modalVerbConflict = true;
-            }
-        }
-
-        /* ==================================================
-           MODAL PRESENCE SIGNAL
-        ================================================== */
-
-        if (modals.length > 0) {
-            a.grammarSignals.modalDetected = true;
-        }
-
-        /* ==================================================
-           MULTIPLE MODALS ERROR SIGNAL
-        ================================================== */
-
-        if (modals.length > 1) {
-            a.grammarSignals.modalStackingError = true;
-        }
-
-        /* ==================================================
-           MODAL CLASSIFICATION (WEAK SIGNAL ONLY)
-        ================================================== */
-
-        const modalTypes = {
-
-            can: "ability",
-            could: "ability_past",
-            may: "possibility",
-            might: "low_possibility",
-            must: "necessity",
-            should: "advice",
-            will: "future",
-            would: "conditional"
+    fix(text, analysis, tokens) {
+        // القاعدة هنا تنبه المستخدم لأن التصحيح يعتمد على سياق الجملة
+        return {
+            text: text,
+            issue: true,
+            reason: "Modal verbs (can, must, should...) must be followed by the base form of the verb. Remove 'to' or the '-ing' suffix."
         };
-
-        for (const m of modals) {
-
-            const modal = m.lower || m;
-
-            if (modalTypes[modal]) {
-
-                a.grammarSignals.modalType = modalTypes[modal];
-            }
-        }
     }
-}
+});
+
+/**
+ * Rule: Modal Stacking
+ * English does not allow stacking multiple modal verbs (e.g., 'might can').
+ */
+const modal_stacking_rule = new GrammarRule({
+    id: "modal_stacking_rule",
+    name: "Modal Stacking",
+    category: GrammarCategory.MODAL,
+    severity: GrammarSeverity.ERROR,
+    priority: 30,
+    enabled: true,
+
+    test(text, analysis, tokens) {
+        return analysis.modals && analysis.modals.length > 1;
+    },
+
+    fix(text, analysis, tokens) {
+        return {
+            text: text,
+            issue: true,
+            reason: "You cannot use two modal verbs together. Choose one that best fits the intended meaning."
+        };
+    }
+});
 
 /* ==========================================================
-   EXPORT
+   REGISTRATION
 ========================================================== */
 
-module.exports = ModalRules;
+GrammarEngine.registerRules([
+    modal_constraint_rule,
+    modal_stacking_rule
+]);
