@@ -1,5 +1,9 @@
 "use strict";
 
+/* ==========================================================
+   Rule Manager v7.0 (Clean Execution Core)
+========================================================== */
+
 class RuleManager {
 
     constructor() {
@@ -7,19 +11,19 @@ class RuleManager {
         this.categories = new Map();
     }
 
-    register(rule) {
-        return this.add(rule);
-    }
+    /* ================================
+       Add Rule
+    ================================ */
 
     add(rule) {
 
         if (!(rule instanceof GrammarRule)) {
-            console.error("[RuleManager] Invalid Rule");
+            console.warn("[RuleManager] Invalid rule ignored");
             return false;
         }
 
         if (this.rules.some(r => r.id === rule.id)) {
-            console.warn(`[RuleManager] Duplicate skipped: ${rule.id}`);
+            console.warn(`[RuleManager] Duplicate rule: ${rule.id}`);
             return false;
         }
 
@@ -29,55 +33,14 @@ class RuleManager {
         return true;
     }
 
-    getRules() {
-        return this.rules;
-    }
+    /* ================================
+       Execute Rules
+    ================================ */
 
-    get(id) {
-        return this.rules.find(r => r.id === id);
-    }
+    execute(text, analysis, tokens = []) {
 
-    remove(id) {
-        this.rules = this.rules.filter(r => r.id !== id);
-    }
+        let output = text;
 
-    clear() {
-        this.rules = [];
-        this.categories.clear();
-    }
-
-    enable(id) {
-        const rule = this.get(id);
-        if (rule) rule.enabled = true;
-    }
-
-    disable(id) {
-        const rule = this.get(id);
-        if (rule) rule.enabled = false;
-    }
-
-    registerCategory(name) {
-        if (!this.categories.has(name)) {
-            this.categories.set(name, []);
-        }
-    }
-
-    addToCategory(category, rule) {
-        this.registerCategory(category);
-        this.categories.get(category).push(rule);
-    }
-
-    sort() {
-        this.rules.sort((a, b) => a.priority - b.priority);
-    }
-
-    /* ======================================================
-       FIXED EXECUTION CORE
-    ====================================================== */
-
-    execute(sentence, analysis, tokens = []) {
-
-        let output = sentence;
         const issues = [];
         const suggestions = [];
 
@@ -87,32 +50,30 @@ class RuleManager {
 
             try {
 
-                const match = rule.test(output, analysis, tokens);
+                // TEST
+                const passed = rule.test(output, analysis, tokens);
 
-                if (!match) continue;
+                if (!passed) continue;
 
+                // FIX
                 const result = rule.fix(output, analysis, tokens);
 
-                if (!result) continue;
-
-                /* 🔥 SAFETY FIX */
-                if (typeof result.text === "string") {
+                if (result?.text) {
                     output = result.text;
                 }
 
-                if (result.issue) {
+                if (result?.issue) {
                     issues.push({
                         id: rule.id,
                         name: rule.name,
                         category: rule.category,
                         severity: rule.severity,
                         reason: result.reason || rule.description,
-                        explanation: result.explanation || "",
                         correction: result.text || output
                     });
                 }
 
-                if (Array.isArray(result.suggestions)) {
+                if (result?.suggestions) {
                     suggestions.push({
                         rule: rule.name,
                         options: result.suggestions
@@ -129,50 +90,81 @@ class RuleManager {
             issues,
             suggestions,
             report: this.generateReport(issues),
-            evaluation: this.evaluateWriting(output, issues)
+            evaluation: this.evaluate(output, issues)
         };
     }
 
+    /* ================================
+       Helpers
+    ================================ */
+
+    sort() {
+        this.rules.sort((a, b) => a.priority - b.priority);
+    }
+
+    getRules() {
+        return this.rules;
+    }
+
+    get(id) {
+        return this.rules.find(r => r.id === id);
+    }
+
+    /* ================================
+       Reporting
+    ================================ */
+
     generateReport(issues) {
+
         const report = {};
+
         for (const issue of issues) {
             report[issue.category] =
                 (report[issue.category] || 0) + 1;
         }
+
         return report;
     }
 
-    statistics() {
-        return {
-            rules: this.rules.length,
-            categories: this.categories.size
-        };
-    }
-
-    evaluateWriting(text, issues) {
+    evaluate(text, issues) {
 
         const grammar = Math.max(100 - issues.length * 10, 0);
 
-        const vocabulary = Math.min(
-            100,
-            60 + text.split(/\s+/).length * 2
+        const length = text.split(/\s+/).length;
+
+        const vocabulary = Math.min(100, 50 + length * 2);
+
+        const naturalness = /[.!?]/.test(text) ? 95 : 80;
+
+        const overall = Math.round(
+            (grammar + vocabulary + naturalness) / 3
         );
-
-        const naturalness = /[.!?]/.test(text) ? 95 : 85;
-
-        const style = /\b(therefore|however|moreover|consequently)\b/i.test(text)
-            ? 95
-            : 75;
 
         return {
             grammar,
             vocabulary,
             naturalness,
-            style,
-            overall: Math.round((grammar + vocabulary + naturalness + style) / 4)
+            overall
         };
     }
 }
 
+/* ================================
+   Singleton
+================================ */
+
+const ruleManager = new RuleManager();
+
 window.RuleManager = RuleManager;
-window.ruleManager = new RuleManager();
+window.ruleManager = ruleManager;
+
+/* ================================
+   Register with Engine
+================================ */
+
+if (window.GrammarEngine) {
+    GrammarEngine.registerManager(
+        "ruleManager",
+        ruleManager
+    );
+}
