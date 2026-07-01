@@ -2,87 +2,104 @@
 
 /* ==========================================================
    English-Bot
-   Comparison Rules
-   Version 5.0
+   Comparison Rules v7
+   - Signal-based architecture
 ========================================================== */
 
-const comparisonRules = [];
+class ComparisonRules {
 
-/* ==========================================================
-   Rule Registration
-========================================================== */
+    apply(analysis) {
 
-function addComparisonRule({
-    description,
-    condition,
-    correction
-}) {
-    comparisonRules.push({
-        description,
-        condition,
-        correction
-    });
+        if (!analysis || !analysis.grammarSignals) return analysis;
+
+        this.validateComparativeContext(analysis);
+        this.validateSuperlativeContext(analysis);
+        this.validateEqualityPatterns(analysis);
+
+        return analysis;
+    }
+
+    /* ======================================================
+       1. COMPARATIVE VALIDATION
+    ====================================================== */
+
+    validateComparativeContext(a) {
+
+        const tokens = a.tokens.map(t => t.lower || t.toLower?.() || t);
+
+        const hasThan = tokens.includes("than");
+
+        if (hasThan) {
+
+            const adjectives = a.adjectives || [];
+
+            for (const adj of adjectives) {
+
+                const word = adj.lower || adj.toLower?.() || adj;
+
+                // very basic morphology check (no generation)
+                const isComparativeForm =
+                    word.endsWith("er") || word.startsWith("more");
+
+                if (!isComparativeForm) {
+                    a.grammarSignals.comparisonIssue = true;
+                }
+            }
+        }
+    }
+
+    /* ======================================================
+       2. SUPERLATIVE VALIDATION
+    ====================================================== */
+
+    validateSuperlativeContext(a) {
+
+        const tokens = a.tokens.map(t => t.lower || t.toLower?.() || t);
+
+        const hasSuperlativeContext =
+            tokens.includes("most") || tokens.includes("the");
+
+        if (hasSuperlativeContext) {
+
+            const adjectives = a.adjectives || [];
+
+            for (const adj of adjectives) {
+
+                const word = adj.lower || adj.toLower?.() || adj;
+
+                const isSuperlativeForm =
+                    word.endsWith("est") || word.startsWith("most");
+
+                if (!isSuperlativeForm) {
+                    a.grammarSignals.comparisonIssue = true;
+                }
+            }
+        }
+    }
+
+    /* ======================================================
+       3. EQUALITY COMPARISON (AS...AS)
+    ====================================================== */
+
+    validateEqualityPatterns(a) {
+
+        const tokens = a.tokens.map(t => t.lower || t.toLower?.() || t);
+
+        const hasAsPattern =
+            tokens.includes("as");
+
+        if (hasAsPattern) {
+
+            // structural check only
+            if (!a.subject || !a.adjectives || a.adjectives.length === 0) {
+                a.grammarSignals.comparisonIssue = true;
+            }
+        }
+    }
 }
 
 /* ==========================================================
-   Comparative Forms
+   EXPORT
 ========================================================== */
 
-addComparisonRule({
-    description: "Use -er for short adjectives in comparative",
-    condition: (word, context) => context.isComparative && word.isShortAdjective && !word.form.endsWith("er"),
-    correction: (word) => word + "er"
-});
-
-addComparisonRule({
-    description: "Use 'more' for long adjectives in comparative",
-    condition: (word, context) => context.isComparative && word.isLongAdjective && !word.form.startsWith("more"),
-    correction: (word) => "more " + word
-});
-
-/* ==========================================================
-   Superlative Forms
-========================================================== */
-
-addComparisonRule({
-    description: "Use -est for short adjectives in superlative",
-    condition: (word, context) => context.isSuperlative && word.isShortAdjective && !word.form.endsWith("est"),
-    correction: (word) => word + "est"
-});
-
-addComparisonRule({
-    description: "Use 'most' for long adjectives in superlative",
-    condition: (word, context) => context.isSuperlative && word.isLongAdjective && !word.form.startsWith("most"),
-    correction: (word) => "most " + word
-});
-
-/* ==========================================================
-   As…As Comparisons
-========================================================== */
-
-addComparisonRule({
-    description: "Use 'as + adjective + as' for equality comparisons",
-    condition: (sentence, context) => context.isEqualityComparison && !sentence.includes("as"),
-    correction: (sentence, adj) => "as " + adj + " as " + sentence.subject
-});
-
-/* ==========================================================
-   Than Usage
-========================================================== */
-
-addComparisonRule({
-    description: "Ensure 'than' is used in comparative sentences",
-    condition: (sentence, context) => context.isComparative && !sentence.includes("than"),
-    correction: (sentence) => sentence + " than ..."
-});
-
-/* ==========================================================
-   Register Rules
-========================================================== */
-
-GrammarEngine.registerRules(
-    "comparisonRules",
-    comparisonRules
-);
-
-window.comparisonRules = comparisonRules;
+module.exports = ComparisonRules;
