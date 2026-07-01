@@ -2,65 +2,44 @@
 
 /* ==========================================================
    English-Bot
-   Idiom Rules v7
-   - Lexical detection only (NOT grammar correction)
+   Idiom Rules v9 (Production Ready)
+   - Rule-based architecture
+   - Idiomatic pattern detection
 ========================================================== */
 
-class IdiomRules {
+/**
+ * Rule: Idiom Detection
+ * Identifies common English idioms and flags potential literal translation risks.
+ */
+const idiom_detection_rule = new GrammarRule({
+    id: "idiom_detection_rule",
+    name: "Idiom Detection",
+    category: GrammarCategory.LEXICAL,
+    severity: GrammarSeverity.INFO,
+    priority: 60, // أولوية منخفضة لأنها ليست خطأً نحوياً
+    enabled: true,
 
-    constructor() {
+    test(text, analysis, tokens) {
+        const idioms = ["kick the bucket", "break the ice", "piece of cake", "hit the sack"];
+        const fullText = tokens.map(t => t.lower).join(" ");
+        
+        return idioms.some(idiom => fullText.includes(idiom));
+    },
 
-        this.idioms = new Set([
-            "kick the bucket",
-            "break the ice",
-            "piece of cake",
-            "hit the sack"
-        ]);
-
+    fix(text, analysis, tokens) {
+        // بما أنها ليست قاعدة نحوية، التصحيح هنا مجرد رسالة توضيحية
+        return {
+            text: text,
+            issue: true,
+            reason: "Idiomatic expression detected. Ensure the figurative meaning is intended."
+        };
     }
-
-    apply(analysis) {
-
-        if (!analysis || !analysis.grammarSignals) return analysis;
-
-        this.detectIdioms(analysis);
-
-        return analysis;
-    }
-
-    /* ======================================================
-       IDIOM DETECTION ONLY
-    ====================================================== */
-
-    detectIdioms(a) {
-
-        const text = a.tokens.map(t => t.lower).join(" ");
-
-        let foundIdiom = false;
-
-        for (const idiom of this.idioms) {
-
-            if (text.includes(idiom)) {
-
-                foundIdiom = true;
-
-                a.grammarSignals.idiomDetected = true;
-                a.grammarSignals.lexicalPhrase = idiom;
-            }
-        }
-
-        /* ==================================================
-           LITERAL TRANSLATION RISK (VERY WEAK HEURISTIC)
-        ================================================== */
-
-        if (foundIdiom && text.split(" ").length < 5) {
-            a.grammarSignals.idiomRisk = true;
-        }
-    }
-}
+});
 
 /* ==========================================================
-   EXPORT
+   REGISTRATION
 ========================================================== */
 
-module.exports = IdiomRules;
+GrammarEngine.registerRules([
+    idiom_detection_rule
+]);
