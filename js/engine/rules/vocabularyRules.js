@@ -2,119 +2,79 @@
 
 /* ==========================================================
    English-Bot
-   Vocabulary Rules
-   Version 7.0
+   Vocabulary Rules v9 (Production Ready)
+   - Rule-based architecture
+   - Handles homophones and register-specific vocabulary
 ========================================================== */
 
-const vocabularyRules = [];
-
-/* ==========================================================
-   Affect / Effect
-========================================================== */
-
-vocabularyRules.push({
-    id: "affect_effect",
-    type: "vocabulary",
-    priority: 10,
-
-    description: "Distinguish between 'affect' (verb) and 'effect' (noun)",
-
-    test(word, context) {
-        return ["affect", "effect"].includes(word.form) && !word.isCorrectUsage;
-    },
-
-    fix(word, context) {
-        if (context.role === "verb") return "affect";
-        if (context.role === "noun") return "effect";
-        return word.form;
-    }
-});
-
-/* ==========================================================
-   Their / There / They're
-========================================================== */
-
-vocabularyRules.push({
-    id: "their_there_theyre",
-    type: "vocabulary",
-    priority: 20,
-
-    description: "Distinguish between their / there / they’re",
-
-    test(word, context) {
-        return ["their", "there", "they’re"].includes(word.form) && !word.isCorrectUsage;
-    },
-
-    fix(word, context) {
-        if (context.role === "possessive") return "their";
-        if (context.role === "location") return "there";
-        if (context.role === "contraction") return "they’re";
-        return word.form;
-    }
-});
-
-/* ==========================================================
-   Lose / Loose
-========================================================== */
-
-vocabularyRules.push({
-    id: "lose_loose",
-    type: "vocabulary",
+/**
+ * Rule: Homophone Correction (Affect/Effect, Lose/Loose, There/Their/They're)
+ */
+const homophone_rule = new GrammarRule({
+    id: "vocab_homophones",
+    name: "Homophone Correction",
+    category: GrammarCategory.VOCABULARY,
+    severity: GrammarSeverity.ERROR,
     priority: 30,
+    enabled: true,
 
-    description: "Distinguish between 'lose' (verb) and 'loose' (adjective)",
-
-    test(word, context) {
-        return ["lose", "loose"].includes(word.form) && !word.isCorrectUsage;
+    test(text, analysis, tokens) {
+        // التحقق من وجود كلمات يكثر الخلط بينها في الـ analysis
+        return analysis.homophonesDetected === true;
     },
 
-    fix(word, context) {
-        if (context.role === "verb") return "lose";
-        if (context.role === "adjective") return "loose";
-        return word.form;
+    fix(text, analysis, tokens) {
+        // المحرك يقوم بتمرير الكلمات التي تحتاج تصحيح ضمن الـ analysis
+        analysis.corrections.forEach(c => {
+            text = text.replace(new RegExp(`\\b${c.wrong}\\b`, 'gi'), c.right);
+        });
+        return { 
+            text: text, 
+            issue: true, 
+            reason: "Homophone usage check: ensure the word matches the grammatical role." 
+        };
     }
 });
 
-/* ==========================================================
-   Formal vs Informal Vocabulary
-========================================================== */
-
-vocabularyRules.push({
-    id: "formal_informal_academic",
-    type: "vocabulary",
+/**
+ * Rule: Register/Tone Consistency (Academic vs. Casual)
+ */
+const register_rule = new GrammarRule({
+    id: "vocab_register",
+    name: "Vocabulary Register Consistency",
+    category: GrammarCategory.VOCABULARY,
+    severity: GrammarSeverity.WARNING,
     priority: 40,
+    enabled: true,
 
-    description: "Use formal vocabulary in academic contexts",
-
-    test(word, context) {
-        return context.isAcademic && word.isInformal;
+    test(text, analysis, tokens) {
+        if (analysis.context === "academic") return tokens.some(t => t.isInformal);
+        if (analysis.context === "casual") return tokens.some(t => t.isFormal);
+        return false;
     },
 
-    fix(word) {
-        return word.toFormalEquivalent?.() || word.form;
-    }
-});
-
-vocabularyRules.push({
-    id: "formal_informal_casual",
-    type: "vocabulary",
-    priority: 50,
-
-    description: "Use informal vocabulary in casual contexts",
-
-    test(word, context) {
-        return context.isCasual && word.isFormal;
-    },
-
-    fix(word) {
-        return word.toInformalEquivalent?.() || word.form;
+    fix(text, analysis, tokens) {
+        let newText = text;
+        tokens.forEach(t => {
+            if (analysis.context === "academic" && t.isInformal) {
+                newText = newText.replace(t.text, t.toFormalEquivalent());
+            } else if (analysis.context === "casual" && t.isFormal) {
+                newText = newText.replace(t.text, t.toInformalEquivalent());
+            }
+        });
+        return { 
+            text: newText, 
+            issue: true, 
+            reason: "Vocabulary register does not match the formal/casual context." 
+        };
     }
 });
 
 /* ==========================================================
-   REGISTER
+   REGISTRATION
 ========================================================== */
 
-GrammarEngine.registerRules("vocabulary", vocabularyRules);
-
-window.vocabularyRules = vocabularyRules;
+GrammarEngine.registerRules([
+    homophone_rule,
+    register_rule
+]);
