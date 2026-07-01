@@ -2,81 +2,93 @@
 
 /* ==========================================================
    English-Bot
-   Passive Voice Rules
-   Version 5.0
+   Passive Voice Engine v7
+   Structural grammar layer
 ========================================================== */
 
-const passiveRules = [];
+class PassiveVoiceEngine {
 
-/* ==========================================================
-   Rule Registration
-========================================================== */
+    apply(analysis) {
 
-function addPassiveRule({
-    description,
-    condition,
-    correction
-}) {
-    passiveRules.push({
-        description,
-        condition,
-        correction
-    });
+        if (!analysis) return analysis;
+
+        if (analysis.voice !== "passive") return analysis;
+
+        analysis.structure = analysis.structure || {};
+
+        this.buildPassiveStructure(analysis);
+
+        return analysis;
+    }
+
+    /* ======================================================
+       CORE PASSIVE STRUCTURE BUILDER
+    ====================================================== */
+
+    buildPassiveStructure(a) {
+
+        const tense = a.tense;
+
+        a.structure.voice = "passive";
+        a.structure.requiresPastParticiple = true;
+
+        switch (tense) {
+
+            case "present":
+                a.structure.auxiliary = this.getBeForm(a, "present");
+                break;
+
+            case "past":
+                a.structure.auxiliary = this.getBeForm(a, "past");
+                break;
+
+            case "future":
+                a.structure.auxiliary = ["will", "be"];
+                break;
+
+            case "presentPerfect":
+                a.structure.auxiliary = this.getHaveForm(a) + ["been"];
+                break;
+
+            case "pastPerfect":
+                a.structure.auxiliary = ["had", "been"];
+                break;
+        }
+
+        a.structure.verbForm = "pastParticiple";
+    }
+
+    /* ======================================================
+       AUXILIARY HELPERS
+    ====================================================== */
+
+    getBeForm(a, tense) {
+
+        if (tense === "present") {
+            return a.subject?.number === "plural"
+                ? ["are"]
+                : ["is"];
+        }
+
+        if (tense === "past") {
+            return a.subject?.number === "plural"
+                ? ["were"]
+                : ["was"];
+        }
+
+        return ["be"];
+    }
+
+    getHaveForm(a) {
+
+        return a.subject?.number === "plural"
+            ? ["have"]
+            : ["has"];
+    }
 }
 
 /* ==========================================================
-   Present Passive
+   EXPORT
 ========================================================== */
 
-addPassiveRule({
-    description: "Use 'is/are + past participle' for present passive",
-    condition: (verb, context) => context.tense === "present" && context.isPassive && !verb.form.includes("is") && !verb.form.includes("are"),
-    correction: (verb, subject) => subject.isSingular ? "is " + verb.pastParticiple : "are " + verb.pastParticiple
-});
-
-/* ==========================================================
-   Past Passive
-========================================================== */
-
-addPassiveRule({
-    description: "Use 'was/were + past participle' for past passive",
-    condition: (verb, context) => context.tense === "past" && context.isPassive && !verb.form.includes("was") && !verb.form.includes("were"),
-    correction: (verb, subject) => subject.isSingular ? "was " + verb.pastParticiple : "were " + verb.pastParticiple
-});
-
-/* ==========================================================
-   Future Passive
-========================================================== */
-
-addPassiveRule({
-    description: "Use 'will be + past participle' for future passive",
-    condition: (verb, context) => context.tense === "future" && context.isPassive && !verb.form.includes("will be"),
-    correction: (verb) => "will be " + verb.pastParticiple
-});
-
-/* ==========================================================
-   Perfect Passive
-========================================================== */
-
-addPassiveRule({
-    description: "Use 'has/have been + past participle' for present perfect passive",
-    condition: (verb, context) => context.tense === "presentPerfect" && context.isPassive && !verb.form.includes("been"),
-    correction: (verb, subject) => subject.isSingular ? "has been " + verb.pastParticiple : "have been " + verb.pastParticiple
-});
-
-addPassiveRule({
-    description: "Use 'had been + past participle' for past perfect passive",
-    condition: (verb, context) => context.tense === "pastPerfect" && context.isPassive && !verb.form.includes("been"),
-    correction: (verb) => "had been " + verb.pastParticiple
-});
-
-/* ==========================================================
-   Register Rules
-========================================================== */
-
-GrammarEngine.registerRules(
-    "passiveRules",
-    passiveRules
-);
-
-window.passiveRules = passiveRules;
+module.exports = PassiveVoiceEngine;
