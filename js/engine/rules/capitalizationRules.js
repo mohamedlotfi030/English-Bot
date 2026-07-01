@@ -2,75 +2,59 @@
 
 /* ==========================================================
    English-Bot
-   Capitalization Rules
-   Version 5.0
+   Capitalization Rules v7
+   - Formatting layer (post-processing)
 ========================================================== */
 
-const capitalizationRules = [];
+class CapitalizationRules {
 
-/* ==========================================================
-   Rule Registration
-========================================================== */
+    apply(text) {
 
-function addCapitalizationRule({
-    description,
-    condition,
-    correction
-}) {
-    capitalizationRules.push({
-        description,
-        condition,
-        correction
-    });
+        if (!text || typeof text !== "string") return text;
+
+        let result = text;
+
+        result = this.capitalizeFirstLetter(result);
+        result = this.capitalizePronounI(result);
+        result = this.capitalizeAfterPeriod(result);
+
+        return result;
+    }
+
+    /* ======================================================
+       1. FIRST LETTER OF SENTENCE
+    ====================================================== */
+
+    capitalizeFirstLetter(text) {
+
+        return text.replace(/(^\s*[a-z])/g, (match) => {
+            return match.toUpperCase();
+        });
+    }
+
+    /* ======================================================
+       2. PRONOUN "i"
+    ====================================================== */
+
+    capitalizePronounI(text) {
+
+        return text.replace(/\bi\b/g, "I");
+    }
+
+    /* ======================================================
+       3. AFTER PERIOD CAPITALIZATION
+    ====================================================== */
+
+    capitalizeAfterPeriod(text) {
+
+        return text.replace(/([.!?]\s*)([a-z])/g, (match, p1, p2) => {
+            return p1 + p2.toUpperCase();
+        });
+    }
 }
 
 /* ==========================================================
-   Sentence Start
+   EXPORT
 ========================================================== */
 
-addCapitalizationRule({
-    description: "Capitalize the first word of a sentence",
-    condition: (sentence) => /^[a-z]/.test(sentence),
-    correction: (sentence) => sentence.charAt(0).toUpperCase() + sentence.slice(1)
-});
-
-/* ==========================================================
-   Proper Nouns
-========================================================== */
-
-addCapitalizationRule({
-    description: "Capitalize proper nouns (names, places, organizations)",
-    condition: (word, context) => context.isProperNoun && /^[a-z]/.test(word),
-    correction: (word) => word.charAt(0).toUpperCase() + word.slice(1)
-});
-
-/* ==========================================================
-   Pronoun 'I'
-========================================================== */
-
-addCapitalizationRule({
-    description: "Always capitalize the pronoun 'I'",
-    condition: (word) => word === "i",
-    correction: () => "I"
-});
-
-/* ==========================================================
-   Days and Months
-========================================================== */
-
-addCapitalizationRule({
-    description: "Capitalize days of the week and months",
-    condition: (word, context) => context.isDayOrMonth && /^[a-z]/.test(word),
-    correction: (word) => word.charAt(0).toUpperCase() + word.slice(1)
-});
-
-/* ==========================================================
-   Register Rules
-========================================================== */
-
-GrammarEngine.registerRules(
-    "capitalizationRules",
-    capitalizationRules
-);
-
-window.capitalizationRules = capitalizationRules;
+module.exports = CapitalizationRules;
