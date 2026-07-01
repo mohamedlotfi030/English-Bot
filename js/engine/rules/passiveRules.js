@@ -2,93 +2,59 @@
 
 /* ==========================================================
    English-Bot
-   Passive Voice Engine v7
-   Structural grammar layer
+   Passive Voice Rules v9 (Production Ready)
+   - Rule-based structural validator
+   - Validates Passive Voice requirements per tense
 ========================================================== */
 
-class PassiveVoiceEngine {
+const passive_structure_rule = new GrammarRule({
+    id: "passive_structure_rule",
+    name: "Passive Voice Structure",
+    category: GrammarCategory.STRUCTURE,
+    severity: GrammarSeverity.ERROR,
+    priority: 40,
+    enabled: true,
 
-    apply(analysis) {
+    // دالة مساعدة لتحديد الفعل المساعد المناسب (نقلها لـ RuleUtils لاحقاً)
+    getAuxiliary(tense, subject) {
+        const isPlural = subject?.number === "plural";
+        const map = {
+            present: isPlural ? ["are"] : ["is"],
+            past: isPlural ? ["were"] : ["was"],
+            future: ["will", "be"],
+            presentPerfect: isPlural ? ["have", "been"] : ["has", "been"],
+            pastPerfect: ["had", "been"]
+        };
+        return map[tense] || [];
+    },
 
-        if (!analysis) return analysis;
+    test(text, analysis, tokens) {
+        // القاعدة تعمل فقط إذا كانت الجملة في صيغة المبني للمجهول
+        return analysis.voice === "passive";
+    },
 
-        if (analysis.voice !== "passive") return analysis;
+    fix(text, analysis, tokens) {
+        const aux = this.getAuxiliary(analysis.tense, analysis.subject);
+        
+        analysis.structure = {
+            voice: "passive",
+            auxiliary: aux,
+            verbForm: "pastParticiple",
+            requiresPastParticiple: true
+        };
 
-        analysis.structure = analysis.structure || {};
-
-        this.buildPassiveStructure(analysis);
-
-        return analysis;
+        return {
+            text: text,
+            issue: false, // هذا تحسين هيكلي للـ analysis object
+            reason: "Passive voice structure validated."
+        };
     }
-
-    /* ======================================================
-       CORE PASSIVE STRUCTURE BUILDER
-    ====================================================== */
-
-    buildPassiveStructure(a) {
-
-        const tense = a.tense;
-
-        a.structure.voice = "passive";
-        a.structure.requiresPastParticiple = true;
-
-        switch (tense) {
-
-            case "present":
-                a.structure.auxiliary = this.getBeForm(a, "present");
-                break;
-
-            case "past":
-                a.structure.auxiliary = this.getBeForm(a, "past");
-                break;
-
-            case "future":
-                a.structure.auxiliary = ["will", "be"];
-                break;
-
-            case "presentPerfect":
-                a.structure.auxiliary = this.getHaveForm(a) + ["been"];
-                break;
-
-            case "pastPerfect":
-                a.structure.auxiliary = ["had", "been"];
-                break;
-        }
-
-        a.structure.verbForm = "pastParticiple";
-    }
-
-    /* ======================================================
-       AUXILIARY HELPERS
-    ====================================================== */
-
-    getBeForm(a, tense) {
-
-        if (tense === "present") {
-            return a.subject?.number === "plural"
-                ? ["are"]
-                : ["is"];
-        }
-
-        if (tense === "past") {
-            return a.subject?.number === "plural"
-                ? ["were"]
-                : ["was"];
-        }
-
-        return ["be"];
-    }
-
-    getHaveForm(a) {
-
-        return a.subject?.number === "plural"
-            ? ["have"]
-            : ["has"];
-    }
-}
+});
 
 /* ==========================================================
-   EXPORT
+   REGISTRATION
 ========================================================== */
 
-module.exports = PassiveVoiceEngine;
+GrammarEngine.registerRules([
+    passive_structure_rule
+]);
