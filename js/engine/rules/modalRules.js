@@ -2,105 +2,109 @@
 
 /* ==========================================================
    English-Bot
-   Modal Rules
-   Version 5.0
+   Modal Rules v7
+   - Modal-Verb interaction validator only
 ========================================================== */
 
-const modalRules = [];
+class ModalRules {
 
-/* ==========================================================
-   Rule Registration
-========================================================== */
+    apply(analysis) {
 
-function addModalRule({
-    description,
-    condition,
-    correction
-}) {
-    modalRules.push({
-        description,
-        condition,
-        correction
-    });
+        if (!analysis || !analysis.grammarSignals) return analysis;
+
+        this.validateModals(analysis);
+
+        return analysis;
+    }
+
+    /* ======================================================
+       CORE VALIDATION ONLY
+    ====================================================== */
+
+    validateModals(a) {
+
+        const tokens = a.tokens.map(t => t.lower);
+
+        const modals = a.modals || [];
+
+        const verbs = a.verbs || [];
+
+        const modalSet = new Set([
+            "can","could",
+            "may","might",
+            "must","should",
+            "shall","will","would"
+        ]);
+
+        /* ==================================================
+           MODAL + VERB BASE CHECK
+        ================================================== */
+
+        for (const m of modals) {
+
+            const modal = m.lower || m;
+
+            const modalIndex = tokens.indexOf(modal);
+
+            const nextToken = tokens[modalIndex + 1];
+
+            if (!nextToken) continue;
+
+            /* ==========================================
+               AFTER MODAL MUST BE BASE VERB
+            ========================================== */
+
+            if (nextToken.endsWith("ing") || nextToken.startsWith("to ")) {
+                a.grammarSignals.modalVerbConflict = true;
+            }
+        }
+
+        /* ==================================================
+           MODAL PRESENCE SIGNAL
+        ================================================== */
+
+        if (modals.length > 0) {
+            a.grammarSignals.modalDetected = true;
+        }
+
+        /* ==================================================
+           MULTIPLE MODALS ERROR SIGNAL
+        ================================================== */
+
+        if (modals.length > 1) {
+            a.grammarSignals.modalStackingError = true;
+        }
+
+        /* ==================================================
+           MODAL CLASSIFICATION (WEAK SIGNAL ONLY)
+        ================================================== */
+
+        const modalTypes = {
+
+            can: "ability",
+            could: "ability_past",
+            may: "possibility",
+            might: "low_possibility",
+            must: "necessity",
+            should: "advice",
+            will: "future",
+            would: "conditional"
+        };
+
+        for (const m of modals) {
+
+            const modal = m.lower || m;
+
+            if (modalTypes[modal]) {
+
+                a.grammarSignals.modalType = modalTypes[modal];
+            }
+        }
+    }
 }
 
 /* ==========================================================
-   Ability (can/could)
+   EXPORT
 ========================================================== */
 
-addModalRule({
-    description: "Use 'can' for present ability",
-    condition: (modal, tense) => modal.form === "can" && tense !== "present",
-    correction: () => "can"
-});
-
-addModalRule({
-    description: "Use 'could' for past ability or polite requests",
-    condition: (modal, tense) => modal.form === "could" && tense !== "past",
-    correction: () => "could"
-});
-
-/* ==========================================================
-   Possibility (may/might)
-========================================================== */
-
-addModalRule({
-    description: "Use 'may' for formal possibility",
-    condition: (modal) => modal.form === "may" && modal.context !== "formal",
-    correction: () => "may"
-});
-
-addModalRule({
-    description: "Use 'might' for less certain possibility",
-    condition: (modal) => modal.form === "might" && modal.context !== "uncertain",
-    correction: () => "might"
-});
-
-/* ==========================================================
-   Necessity / Obligation (must/should/shall)
-========================================================== */
-
-addModalRule({
-    description: "Use 'must' for strong necessity",
-    condition: (modal) => modal.form === "must" && modal.context !== "necessity",
-    correction: () => "must"
-});
-
-addModalRule({
-    description: "Use 'should' for advice or mild obligation",
-    condition: (modal) => modal.form === "should" && modal.context !== "advice",
-    correction: () => "should"
-});
-
-addModalRule({
-    description: "Use 'shall' for formal obligation or future (rare in modern English)",
-    condition: (modal) => modal.form === "shall" && modal.context !== "formal",
-    correction: () => "shall"
-});
-
-/* ==========================================================
-   Prediction / Future (will/would)
-========================================================== */
-
-addModalRule({
-    description: "Use 'will' for future certainty",
-    condition: (modal, tense) => modal.form === "will" && tense !== "future",
-    correction: () => "will"
-});
-
-addModalRule({
-    description: "Use 'would' for hypothetical or polite future",
-    condition: (modal, tense) => modal.form === "would" && tense !== "conditional",
-    correction: () => "would"
-});
-
-/* ==========================================================
-   Register Rules
-========================================================== */
-
-GrammarEngine.registerRules(
-    "modalRules",
-    modalRules
-);
-
-window.modalRules = modalRules;
+module.exports = ModalRules;
