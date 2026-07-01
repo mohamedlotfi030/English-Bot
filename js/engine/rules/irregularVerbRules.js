@@ -2,65 +2,86 @@
 
 /* ==========================================================
    English-Bot
-   Irregular Verb Rules
-   Version 5.0
+   Irregular Verb Signals v7
+   - Lexical validation only
 ========================================================== */
 
-const irregularVerbRules = [];
+class IrregularVerbRules {
 
-/* ==========================================================
-   Rule Registration
-========================================================== */
+    constructor() {
 
-function addIrregularVerbRule({
-    description,
-    condition,
-    correction
-}) {
-    irregularVerbRules.push({
-        description,
-        condition,
-        correction
-    });
+        this.lexicon = {
+            go: { past: "went", pp: "gone" },
+            see: { past: "saw", pp: "seen" },
+            eat: { past: "ate", pp: "eaten" },
+            take: { past: "took", pp: "taken" }
+        };
+
+    }
+
+    apply(analysis) {
+
+        if (!analysis || !analysis.grammarSignals) return analysis;
+
+        this.validate(analysis);
+
+        return analysis;
+    }
+
+    /* ======================================================
+       VALIDATION ONLY
+    ====================================================== */
+
+    validate(a) {
+
+        const verbs = a.verbs || [];
+
+        const tense = a.tense;
+
+        for (const v of verbs) {
+
+            const base = v.base || v.lower;
+
+            const entry = this.lexicon[base];
+
+            if (!entry) continue;
+
+            /* ==============================================
+               PAST CHECK
+            ============================================== */
+
+            if (tense === "past") {
+
+                if (v.form !== entry.past) {
+                    a.grammarSignals.irregularMismatch = true;
+                }
+            }
+
+            /* ==============================================
+               PERFECT CHECK
+            ============================================== */
+
+            if (tense.includes("Perfect")) {
+
+                if (v.form !== entry.pp) {
+                    a.grammarSignals.irregularMismatch = true;
+                }
+            }
+        }
+
+        /* ==============================================
+           CONTINUOUS SIGNAL ONLY
+        ============================================== */
+
+        if (tense.includes("Continuous")) {
+
+            a.grammarSignals.continuousVerbForm = true;
+        }
+    }
 }
 
 /* ==========================================================
-   Past Simple Forms
+   EXPORT
 ========================================================== */
 
-addIrregularVerbRule({
-    description: "Use stored past form for irregular verbs",
-    condition: (verb, tense) => tense === "past" && verb.type === "irregular" && verb.form !== verb.past,
-    correction: (verb) => verb.past
-});
-
-/* ==========================================================
-   Past Participle Forms
-========================================================== */
-
-addIrregularVerbRule({
-    description: "Use stored past participle form for irregular verbs",
-    condition: (verb, tense) => ["presentPerfect","pastPerfect","futurePerfect"].includes(tense) && verb.type === "irregular" && verb.form !== verb.pastParticiple,
-    correction: (verb) => verb.pastParticiple
-});
-
-/* ==========================================================
-   Continuous Forms
-========================================================== */
-
-addIrregularVerbRule({
-    description: "Use -ing form for continuous tenses",
-    condition: (verb, tense) => tense.includes("Continuous") && !verb.form.endsWith("ing"),
-    correction: (verb) => verb.toIngForm()
-});
-
-/* ==========================================================
-   Register Rules
-========================================================== */
-
-GrammarEngine.registerRules(
-    "irregularVerbRules",
-    irregularVerbRules
-);
-
-window.irregularVerbRules = irregularVerbRules;
+module.exports = IrregularVerbRules;
