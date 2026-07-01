@@ -3,76 +3,118 @@
 /* ==========================================================
    English-Bot
    Vocabulary Rules
-   Version 5.0
+   Version 7.0
 ========================================================== */
 
 const vocabularyRules = [];
 
 /* ==========================================================
-   Rule Registration
+   Affect / Effect
 ========================================================== */
 
-function addVocabularyRule({
-    description,
-    condition,
-    correction
-}) {
-    vocabularyRules.push({
-        description,
-        condition,
-        correction
-    });
-}
+vocabularyRules.push({
+    id: "affect_effect",
+    type: "vocabulary",
+    priority: 10,
 
-/* ==========================================================
-   Commonly Confused Words
-========================================================== */
-
-addVocabularyRule({
     description: "Distinguish between 'affect' (verb) and 'effect' (noun)",
-    condition: (word, context) => ["affect","effect"].includes(word.form) && !word.isCorrectUsage,
-    correction: (word, context) => context.role === "verb" ? "affect" : "effect"
-});
 
-addVocabularyRule({
-    description: "Distinguish between 'their', 'there', and 'they’re'",
-    condition: (word, context) => ["their","there","they’re"].includes(word.form) && !word.isCorrectUsage,
-    correction: (word, context) => {
-        if (context.role === "possessive") return "their";
-        if (context.role === "location") return "there";
-        if (context.role === "contraction") return "they’re";
+    test(word, context) {
+        return ["affect", "effect"].includes(word.form) && !word.isCorrectUsage;
+    },
+
+    fix(word, context) {
+        if (context.role === "verb") return "affect";
+        if (context.role === "noun") return "effect";
+        return word.form;
     }
 });
 
-addVocabularyRule({
+/* ==========================================================
+   Their / There / They're
+========================================================== */
+
+vocabularyRules.push({
+    id: "their_there_theyre",
+    type: "vocabulary",
+    priority: 20,
+
+    description: "Distinguish between their / there / they’re",
+
+    test(word, context) {
+        return ["their", "there", "they’re"].includes(word.form) && !word.isCorrectUsage;
+    },
+
+    fix(word, context) {
+        if (context.role === "possessive") return "their";
+        if (context.role === "location") return "there";
+        if (context.role === "contraction") return "they’re";
+        return word.form;
+    }
+});
+
+/* ==========================================================
+   Lose / Loose
+========================================================== */
+
+vocabularyRules.push({
+    id: "lose_loose",
+    type: "vocabulary",
+    priority: 30,
+
     description: "Distinguish between 'lose' (verb) and 'loose' (adjective)",
-    condition: (word, context) => ["lose","loose"].includes(word.form) && !word.isCorrectUsage,
-    correction: (word, context) => context.role === "verb" ? "lose" : "loose"
+
+    test(word, context) {
+        return ["lose", "loose"].includes(word.form) && !word.isCorrectUsage;
+    },
+
+    fix(word, context) {
+        if (context.role === "verb") return "lose";
+        if (context.role === "adjective") return "loose";
+        return word.form;
+    }
 });
 
 /* ==========================================================
    Formal vs Informal Vocabulary
 ========================================================== */
 
-addVocabularyRule({
+vocabularyRules.push({
+    id: "formal_informal_academic",
+    type: "vocabulary",
+    priority: 40,
+
     description: "Use formal vocabulary in academic contexts",
-    condition: (word, context) => context.isAcademic && word.isInformal,
-    correction: (word) => word.toFormalEquivalent()
+
+    test(word, context) {
+        return context.isAcademic && word.isInformal;
+    },
+
+    fix(word) {
+        return word.toFormalEquivalent?.() || word.form;
+    }
 });
 
-addVocabularyRule({
+vocabularyRules.push({
+    id: "formal_informal_casual",
+    type: "vocabulary",
+    priority: 50,
+
     description: "Use informal vocabulary in casual contexts",
-    condition: (word, context) => context.isCasual && word.isFormal,
-    correction: (word) => word.toInformalEquivalent()
+
+    test(word, context) {
+        return context.isCasual && word.isFormal;
+    },
+
+    fix(word) {
+        return word.toInformalEquivalent?.() || word.form;
+    }
 });
 
 /* ==========================================================
-   Register Rules
+   REGISTER
 ========================================================== */
 
-GrammarEngine.registerRules(
-    "vocabularyRules",
-    vocabularyRules
-);
+GrammarEngine.registerRules("vocabulary", vocabularyRules);
 
 window.vocabularyRules = vocabularyRules;
