@@ -3,8 +3,7 @@
 /* ==========================================================
    English-Bot
    Grammar Framework
-   Version 6.0
-   (Core Definitions Only)
+   Version 7.0 (ENGINE COMPATIBLE)
 ========================================================== */
 
 /* ==========================================================
@@ -25,18 +24,13 @@ const GrammarCategory = Object.freeze({
     PASSIVE: "passive",
     CONDITIONAL: "conditional",
     REPORTED_SPEECH: "reportedSpeech",
-    COMPARISON: "comparison",
     PLURAL: "plural",
-    COUNTABLE: "countable",
     WORD_ORDER: "wordOrder",
-    CAPITALIZATION: "capitalization",
     PUNCTUATION: "punctuation",
     SPELLING: "spelling",
     STYLE: "style",
     VOCABULARY: "vocabulary",
-    COLLOCATION: "collocation",
-    IDIOM: "idiom",
-    NATURAL_ENGLISH: "naturalEnglish"
+    IDIOM: "idiom"
 });
 
 /* ==========================================================
@@ -51,7 +45,7 @@ const GrammarSeverity = Object.freeze({
 });
 
 /* ==========================================================
-   Grammar Rule
+   Grammar Rule (FIXED)
 ========================================================== */
 
 class GrammarRule {
@@ -59,35 +53,38 @@ class GrammarRule {
     constructor(options = {}) {
 
         this.id = options.id || "";
-
         this.name = options.name || "";
-
         this.category = options.category || GrammarCategory.GRAMMAR;
-
         this.description = options.description || "";
-
-        this.priority = Number.isFinite(options.priority)
-            ? options.priority
-            : 100;
-
+        this.priority = options.priority ?? 100;
         this.severity = options.severity || GrammarSeverity.ERROR;
-
         this.enabled = options.enabled !== false;
 
-        this.test =
-            typeof options.test === "function"
-                ? options.test
+        /* 🔥 FIX 1: unify condition system */
+        this.test = typeof options.test === "function"
+            ? options.test
+            : typeof options.condition === "function"
+                ? options.condition
                 : () => false;
 
-        this.fix =
-            typeof options.fix === "function"
-                ? options.fix
-                : (sentence) => ({
-                      text: sentence,
-                      issue: false
-                  });
-    }
+        /* 🔥 FIX 2: unified fix output */
+        this.fix = typeof options.fix === "function"
+            ? options.fix
+            : (sentence, analysis) => {
 
+                if (typeof options.correction === "function") {
+                    return {
+                        text: options.correction(sentence, analysis),
+                        issue: true
+                    };
+                }
+
+                return {
+                    text: sentence,
+                    issue: false
+                };
+            };
+    }
 }
 
 /* ==========================================================
@@ -99,29 +96,21 @@ class GrammarCorrection {
     constructor(options = {}) {
 
         this.issue = options.issue || "";
-
         this.reason = options.reason || "";
-
         this.explanation = options.explanation || "";
-
         this.correction = options.correction || "";
 
         this.suggestions = Array.isArray(options.suggestions)
             ? options.suggestions
             : [];
-
     }
-
 }
 
 /* ==========================================================
-   Exports
+   Export
 ========================================================== */
 
 window.GrammarCategory = GrammarCategory;
-
 window.GrammarSeverity = GrammarSeverity;
-
 window.GrammarRule = GrammarRule;
-
 window.GrammarCorrection = GrammarCorrection;
