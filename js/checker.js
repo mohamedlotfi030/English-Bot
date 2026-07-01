@@ -1,75 +1,67 @@
+"use strict";
+
 /* ==========================================================
    English-Bot
    checker.js
-   Version 2.1 (RuleManager + Writing Evaluation)
+   Version 3.0 (v7 Compatible)
 ========================================================== */
-
-"use strict";
 
 /* ==========================================================
    Main Function
 ========================================================== */
 
 async function processText() {
+
     const textarea = document.getElementById("userInput");
     const resultBox = document.getElementById("checkerResult");
 
-    if (!textarea || !resultBox) {
-        return;
-    }
+    if (!textarea || !resultBox) return;
 
     let input = textarea.value.trim();
 
     if (!input) {
         showToast("Please enter a sentence.", "error");
-        resultBox.classList.remove("hidden");
-        resultBox.innerHTML = `
-            <p class="text-danger">
-                Please enter a sentence.
-            </p>
-        `;
         return;
     }
 
     showLoader();
-    resultBox.classList.remove("hidden");
-    resultBox.innerHTML = `
-        <p>
-            Checking grammar...
-        </p>
-    `;
 
-    // تطبيق قواعد التنسيق الأساسية
-    input = applyLogicRules(input);
+    resultBox.classList.remove("hidden");
+    resultBox.innerHTML = `<p>Checking grammar...</p>`;
 
     try {
-        // ✅ المحرك الأساسي: RuleManager
-        const analysis = GrammarEngine.analyze(input);
-        const response = ruleManager.execute(input, analysis);
 
-        // عرض النتائج من RuleManager
+        /* ==================================================
+           Logic Rules (basic formatting only)
+        ================================================== */
+        input = applyLogicRules(input);
+
+        /* ==================================================
+           CORE ENGINE (v7 single source of truth)
+        ================================================== */
+        const response = GrammarEngine.correct(input);
+
+        /* ==================================================
+           Render Results
+        ================================================== */
         renderGrammarResult(input, response);
 
-        // عرض تقييم الكتابة
         renderWritingEvaluation(response);
 
-        // حفظ النص المصحح في التاريخ
         saveHistory(response.text);
 
-        // 🔥 مساعد إضافي: LanguageTool (اختياري)
-        // const ltResponse = await checkGrammar(input);
-        // if (ltResponse.success) {
-        //     console.log("LanguageTool suggestions:", ltResponse.data);
-        // }
-
     } catch (error) {
+
         console.error(error);
+
         showToast("Unable to process grammar rules.", "error");
+
         resultBox.innerHTML = `
             <p class="text-danger">
                 Unable to process grammar rules.
             </p>
         `;
+
     } finally {
         hideLoader();
     }
@@ -80,18 +72,15 @@ async function processText() {
 ========================================================== */
 
 function applyLogicRules(text) {
+
     let sentence = text.trim();
 
-    // Normalize spaces
     sentence = sentence.replace(/\s+/g, " ");
 
-    // Capitalize first letter
     sentence = sentence.charAt(0).toUpperCase() + sentence.slice(1);
 
-    // Pronoun I
     sentence = sentence.replace(/\bi\b/g, "I");
 
-    // Punctuation at the end
     if (!/[.!?]$/.test(sentence)) {
         sentence += ".";
     }
@@ -100,66 +89,62 @@ function applyLogicRules(text) {
 }
 
 /* ==========================================================
-   Accuracy Score
+   Grammar Score
 ========================================================== */
 
 function calculateGrammarScore(issues) {
-    if (!Array.isArray(issues)) {
-        return 100;
-    }
-    return Math.max(100 - (issues.length * 10), 0);
+
+    if (!Array.isArray(issues)) return 100;
+
+    return Math.max(100 - issues.length * 10, 0);
 }
 
 /* ==========================================================
-   Grammar Result
+   Render Grammar Result
 ========================================================== */
 
 function renderGrammarResult(original, data) {
+
     const resultBox = document.getElementById("checkerResult");
-    if (!resultBox) {
-        return;
-    }
+    if (!resultBox) return;
 
-    // النص المصحح من RuleManager
     const corrected = data.text || original;
-
-    // قائمة الأخطاء
     const issues = Array.isArray(data.issues) ? data.issues : [];
 
-    // حساب الدرجات
     const score = calculateGrammarScore(issues);
 
-    // النصوص الآمنة للعرض
     const safeOriginal = escapeHtml(original);
     const safeCorrected = escapeHtml(corrected);
     const speechText = JSON.stringify(corrected);
 
-    // بناء التقرير
     resultBox.innerHTML = `
         <h3>Grammar Report</h3>
         <hr>
+
         <p><strong>Original:</strong> ${safeOriginal}</p>
-        <br>
         <p><strong>Corrected:</strong> ${safeCorrected}</p>
-        <br>
+
         <p><strong>Errors:</strong> ${issues.length}</p>
         <p><strong>Accuracy:</strong> ${score}%</p>
+
         <div class="audio-group">
             <button class="audio-btn" onclick='speak(${speechText},"en-US")'>🇺🇸 US</button>
             <button class="audio-btn" onclick='speak(${speechText},"en-GB")'>🇬🇧 UK</button>
-            <button class="audio-btn" onclick='speakWord("${data.text}","en-US")'>🔊 Word US</button>
-            <button class="audio-btn" onclick='speakWord("${data.text}","en-GB")'>🔊 Word UK</button>
+            <button class="audio-btn" onclick='speakWord("${corrected}","en-US")'>🔊 Word US</button>
+            <button class="audio-btn" onclick='speakWord("${corrected}","en-GB")'>🔊 Word UK</button>
         </div>
+
         <hr>
+
         <h4>Details:</h4>
         <ul>
             ${issues.map(issue => `
                 <li>
-                    <strong>${escapeHtml(issue.name)}</strong> 
-                    (${escapeHtml(issue.category)}) → 
-                    ${escapeHtml(issue.reason)} 
+                    <strong>${escapeHtml(issue.name || "")}</strong>
+                    (${escapeHtml(issue.category || "")}) →
+                    ${escapeHtml(issue.reason || "")}
                     <br>
-                    <em>Correction:</em> ${escapeHtml(issue.correction)}
+                    <em>Correction:</em> ${escapeHtml(issue.correction || "")}
                 </li>
             `).join("")}
         </ul>
@@ -171,9 +156,13 @@ function renderGrammarResult(original, data) {
 ========================================================== */
 
 function calculateWritingEvaluation(data) {
+
     const grammarScore = calculateGrammarScore(data.issues);
+
     const vocabularyScore = evaluateVocabulary(data.text);
+
     const naturalnessScore = evaluateNaturalness(data.text);
+
     const styleScore = evaluateStyle(data.text);
 
     const overallScore = Math.round(
@@ -189,7 +178,12 @@ function calculateWritingEvaluation(data) {
     };
 }
 
+/* ==========================================================
+   Render Writing Evaluation
+========================================================== */
+
 function renderWritingEvaluation(data) {
+
     const resultBox = document.getElementById("checkerResult");
     if (!resultBox) return;
 
@@ -198,6 +192,7 @@ function renderWritingEvaluation(data) {
     resultBox.innerHTML += `
         <hr>
         <h3>Writing Evaluation</h3>
+
         <p><strong>Grammar:</strong> ${evaluation.grammar}%</p>
         <p><strong>Vocabulary:</strong> ${evaluation.vocabulary}%</p>
         <p><strong>Naturalness:</strong> ${evaluation.naturalness}%</p>
@@ -207,24 +202,24 @@ function renderWritingEvaluation(data) {
 }
 
 /* ==========================================================
-   Placeholder Evaluation Functions
-   (يمكنك تطويرها لاحقًا باستخدام التحليل اللغوي)
+   Evaluation Helpers
 ========================================================== */
 
 function evaluateVocabulary(text) {
-    // مثال مبسط: كلما زاد طول النص زادت درجة المفردات
-    const words = text.split(/\s+/);
-    return Math.min(100, 60 + words.length);
+
+    const words = text.split(/\s+/).length;
+
+    return Math.min(100, 50 + words * 2);
 }
 
 function evaluateNaturalness(text) {
-    // مثال مبسط: يعتمد على وجود علامات ترقيم
-    return /[.!?]/.test(text) ? 95 : 85;
+
+    return /[.!?]/.test(text) ? 95 : 80;
 }
 
 function evaluateStyle(text) {
-    // مثال مبسط: يعتمد على وجود كلمات رسمية
-    return /\b(therefore|however|moreover)\b/i.test(text) ? 90 : 80;
+
+    return /\b(therefore|however|moreover)\b/i.test(text) ? 90 : 75;
 }
 
 /* ==========================================================
