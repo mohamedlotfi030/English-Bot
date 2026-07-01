@@ -2,75 +2,86 @@
 
 /* ==========================================================
    English-Bot
-   Gerund Rules
-   Version 5.0
+   Gerund Rules v7
+   - Syntax constraint validation only
 ========================================================== */
 
-const gerundRules = [];
+class GerundRules {
 
-/* ==========================================================
-   Rule Registration
-========================================================== */
+    apply(analysis) {
 
-function addGerundRule({
-    description,
-    condition,
-    correction
-}) {
-    gerundRules.push({
-        description,
-        condition,
-        correction
-    });
+        if (!analysis || !analysis.grammarSignals) return analysis;
+
+        this.validateGerundUsage(analysis);
+
+        return analysis;
+    }
+
+    /* ======================================================
+       GERUND VALIDATION ONLY
+    ====================================================== */
+
+    validateGerundUsage(a) {
+
+        const tokens = a.tokens.map(t => t.lower || t.toLower?.() || t);
+
+        const verbs = a.verbs || [];
+
+        const prepositions = a.prepositions || [];
+
+        const triggerVerbs = [
+            "enjoy","avoid","suggest","consider","finish","stop","mind"
+        ];
+
+        /* ==================================================
+           AFTER PREPOSITION → GERUND EXPECTATION
+        ================================================== */
+
+        if (prepositions.length > 0 && verbs.length > 0) {
+
+            for (const verb of verbs) {
+
+                const v = verb.lower || verb;
+
+                if (!v.endsWith("ing") && !v.startsWith("to ")) {
+                    a.grammarSignals.gerundIssue = true;
+                }
+            }
+        }
+
+        /* ==================================================
+           VERB COMPLEMENT PATTERN
+        ================================================== */
+
+        const hasTriggerVerb = tokens.some(t =>
+            triggerVerbs.includes(t)
+        );
+
+        if (hasTriggerVerb) {
+
+            const hasInfinitive = tokens.includes("to");
+
+            if (hasInfinitive) {
+                a.grammarSignals.gerundIssue = true;
+            }
+        }
+
+        /* ==================================================
+           SIMPLE HEURISTIC FLAG
+        ================================================== */
+
+        const ingCount = verbs.filter(v =>
+            (v.lower || v).endsWith("ing")
+        ).length;
+
+        if (ingCount > 1) {
+            a.grammarSignals.gerundComplexity = true;
+        }
+    }
 }
 
 /* ==========================================================
-   Gerund as Subject
+   EXPORT
 ========================================================== */
 
-addGerundRule({
-    description: "Use gerund (-ing) form as subject of sentence",
-    condition: (word, context) => context.isSubject && word.isVerbBase,
-    correction: (word) => word + "ing"
-});
-
-/* ==========================================================
-   Gerund after Prepositions
-========================================================== */
-
-addGerundRule({
-    description: "Use gerund after prepositions",
-    condition: (word, context) => context.afterPreposition && word.isVerbBase,
-    correction: (word) => word + "ing"
-});
-
-/* ==========================================================
-   Gerund after Certain Verbs
-========================================================== */
-
-addGerundRule({
-    description: "Use gerund after verbs like enjoy, avoid, suggest, consider",
-    condition: (word, context) => context.afterVerb && ["enjoy","avoid","suggest","consider"].includes(context.verb) && word.isVerbBase,
-    correction: (word) => word + "ing"
-});
-
-/* ==========================================================
-   Distinguish Gerund vs Infinitive
-========================================================== */
-
-addGerundRule({
-    description: "Correct use of gerund vs infinitive depending on verb",
-    condition: (word, context) => context.afterVerb && context.requiresGerund && word.isInfinitive,
-    correction: (word) => word.replace("to ", "") + "ing"
-});
-
-/* ==========================================================
-   Register Rules
-========================================================== */
-
-GrammarEngine.registerRules(
-    "gerundRules",
-    gerundRules
-);
-
-window.gerundRules = gerundRules;
+module.exports = GerundRules;
