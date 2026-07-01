@@ -21,8 +21,13 @@ class Tokenizer {
         };
 
         this.cache = {};
+
         this.refreshCache();
     }
+
+    /* ======================================================
+       SAFE CACHE LOADER (FIXED)
+    ====================================================== */
 
     refreshCache() {
 
@@ -39,13 +44,20 @@ class Tokenizer {
         ];
 
         for (const name of names) {
-            this.cache[name] = GrammarEngine.getDictionary(name);
+
+            const dict = GrammarEngine.getDictionary?.(name);
+
+            this.cache[name] = dict || new Set();
         }
     }
 
     updateCache() {
         this.refreshCache();
     }
+
+    /* ======================================================
+       TOKENIZE
+    ====================================================== */
 
     tokenize(text) {
 
@@ -61,14 +73,16 @@ class Tokenizer {
 
         for (const value of matches) {
 
-            const token = this.createToken(value, index++);
-            tokens.push(token);
-
+            tokens.push(this.createToken(value, index++));
             this.statistics.totalTokens++;
         }
 
         return tokens;
     }
+
+    /* ======================================================
+       CREATE TOKEN
+    ====================================================== */
 
     createToken(value, position) {
 
@@ -88,6 +102,10 @@ class Tokenizer {
             }
         };
     }
+
+    /* ======================================================
+       CLASSIFY
+    ====================================================== */
 
     classify(word, lower) {
 
@@ -123,6 +141,10 @@ class Tokenizer {
         return "word";
     }
 
+    /* ======================================================
+       DICTIONARY CHECK (SAFE)
+    ====================================================== */
+
     inDictionary(name, word) {
 
         const dict = this.cache[name];
@@ -136,6 +158,10 @@ class Tokenizer {
 
         return false;
     }
+
+    /* ======================================================
+       HELPERS
+    ====================================================== */
 
     words(tokens) {
         return tokens.filter(t => t.flags.isWord);
@@ -161,6 +187,10 @@ class Tokenizer {
         return { ...this.statistics };
     }
 }
+
+/* ==========================================================
+   SINGLETON
+========================================================== */
 
 const tokenizer = new Tokenizer();
 
