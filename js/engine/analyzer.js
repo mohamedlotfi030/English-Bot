@@ -2,21 +2,19 @@
 
 /* ==========================================================
    English-Bot
-   Analyzer
-   Version 6.0
-   (Completely Rewritten)
+   Analyzer v7.0 (HYBRID)
+   - Combines structural NLP (v6)
+   - + Grammar Signals Engine (v2 concept)
 ========================================================== */
 
 class Analyzer {
 
     constructor() {
-
-        this.version = "6.0";
-
+        this.version = "7.0";
     }
 
     /* ======================================================
-       Public Analyze
+       PUBLIC ANALYZE
     ====================================================== */
 
     analyze(tokens = []) {
@@ -28,6 +26,10 @@ class Analyzer {
         const analysis = {
 
             tokens,
+
+            /* ==================================================
+               CORE STRUCTURE (from v6)
+            ================================================== */
 
             subject: null,
             object: null,
@@ -46,6 +48,10 @@ class Analyzer {
 
             complexity: "simple",
 
+            /* ==================================================
+               LEXICAL GROUPS (from v6, cleaned)
+            ================================================== */
+
             auxiliaries: [],
             modals: [],
             articles: [],
@@ -56,7 +62,20 @@ class Analyzer {
             adverbs: [],
             prepositions: [],
             conjunctions: [],
-            timeExpressions: []
+            timeExpressions: [],
+
+            /* ==================================================
+               GRAMMAR SIGNALS (NEW - v2 concept)
+            ================================================== */
+
+            grammarSignals: {
+                agreementViolation: false,
+                articleError: false,
+                pronounIssue: false,
+                tenseMismatch: false,
+                verbFormIssue: false,
+                sentenceIssue: false
+            }
 
         };
 
@@ -64,9 +83,17 @@ class Analyzer {
             return analysis;
         }
 
+        /* ======================================================
+           PIPELINE (v6 structure preserved)
+        ====================================================== */
+
         this.collectTokens(analysis);
 
         this.detectSentenceType(analysis);
+
+        this.detectConditionals(analysis);
+
+        this.detectNegative(analysis);
 
         this.detectSubject(analysis);
 
@@ -80,109 +107,28 @@ class Analyzer {
 
         this.detectComplexity(analysis);
 
-        return analysis;
+        /* ======================================================
+           GRAMMAR SIGNAL ENGINE (NEW LAYER)
+        ====================================================== */
 
+        this.detectAgreementSignals(analysis);
+
+        this.detectArticleSignals(analysis);
+
+        this.detectPronounSignals(analysis);
+
+        this.detectVerbSignals(analysis);
+
+        return analysis;
     }
 
     /* ======================================================
-       Collect Tokens
+       TOKEN COLLECTION (v6)
     ====================================================== */
 
     collectTokens(analysis) {
 
-        for (const token of analysis.tokens) {
-
-            switch (token.type) {
-
-                case "noun":
-                    analysis.nouns.push(token);
-                    break;
-
-                case "verb":
-                    analysis.verbs.push(token);
-                    break;
-
-                case "article":
-                    analysis.articles.push(token);
-                    break;
-
-                case "pronoun":
-                    analysis.pronouns.push(token);
-                    break;
-
-                case "adjective":
-                    analysis.adjectives.push(token);
-                    break;
-
-                case "adverb":
-                    analysis.adverbs.push(token);
-                    break;
-
-                case "preposition":
-                    analysis.prepositions.push(token);
-                    break;
-
-            }
-
-        }
-
-    }
-       /* ======================================================
-       Sentence Type
-    ====================================================== */
-
-    detectSentenceType(analysis) {
-
-        const first = analysis.tokens[0]?.lower || "";
-        const last = analysis.tokens[analysis.tokens.length - 1]?.value || "";
-
-        if (last === "?") {
-            analysis.sentenceType = "question";
-            analysis.question = true;
-        }
-
-        const auxiliaryQuestions = [
-            "am","is","are","was","were",
-            "do","does","did",
-            "have","has","had",
-            "can","could",
-            "will","would",
-            "shall","should",
-            "may","might",
-            "must"
-        ];
-
-        if (auxiliaryQuestions.includes(first)) {
-            analysis.question = true;
-            analysis.sentenceType = "question";
-        }
-
-    }
-
-    /* ======================================================
-       Subject Detection
-    ====================================================== */
-
-    detectSubject(analysis) {
-
-        if (analysis.pronouns.length > 0) {
-            analysis.subject = analysis.pronouns[0].value;
-            return;
-        }
-
-        if (analysis.nouns.length > 0) {
-            analysis.subject = analysis.nouns[0].value;
-        }
-
-    }
-
-    /* ======================================================
-       Main Verb Detection
-    ====================================================== */
-
-    detectVerb(analysis) {
-
-        const auxiliaries = [
+        const aux = [
             "am","is","are","was","were",
             "be","been","being",
             "do","does","did",
@@ -199,278 +145,270 @@ class Analyzer {
 
         for (const token of analysis.tokens) {
 
-            if (modals.includes(token.lower)) {
-                analysis.modals.push(token);
-                continue;
-            }
+            const t = token.lower || token.toLowerCase?.() || token;
 
-            if (auxiliaries.includes(token.lower)) {
+            if (aux.includes(t)) {
                 analysis.auxiliaries.push(token);
-                continue;
             }
 
-            if (token.type === "verb" && !analysis.verb) {
-                analysis.verb = token.value;
-                analysis.verbForm = token.lower;
+            if (modals.includes(t)) {
+                analysis.modals.push(token);
             }
 
+            if (t === "a" || t === "an" || t === "the") {
+                analysis.articles.push(token);
+            }
+
+            if (["i","you","he","she","it","we","they","me","him","her","us","them"].includes(t)) {
+                analysis.pronouns.push(token);
+            }
+
+            if (token.type === "noun") analysis.nouns.push(token);
+            if (token.type === "verb") analysis.verbs.push(token);
+            if (token.type === "adjective") analysis.adjectives.push(token);
+            if (token.type === "adverb") analysis.adverbs.push(token);
+            if (token.type === "preposition") analysis.prepositions.push(token);
+            if (token.type === "conjunction") analysis.conjunctions.push(token);
         }
-
     }
 
     /* ======================================================
-       Object Detection
+       SENTENCE TYPE
     ====================================================== */
 
-    detectObject(analysis) {
+    detectSentenceType(a) {
 
-        if (analysis.nouns.length > 1) {
-            analysis.object =
-                analysis.nouns[analysis.nouns.length - 1].value;
+        const first = a.tokens[0]?.lower || a.tokens[0]?.toLower?.() || "";
+        const last = a.tokens[a.tokens.length - 1]?.value || "";
+
+        const questionWords = ["do","does","did","is","are","am","can","could","will","would","shall","should"];
+
+        if (last === "?") {
+            a.sentenceType = "question";
+            a.question = true;
         }
 
-    }
-       /* ======================================================
-       Tense Detection
-    ====================================================== */
-
-    detectTense(analysis) {
-
-        const words = analysis.tokens.map(t => t.lower);
-
-        if (
-            words.includes("will") ||
-            words.includes("shall")
-        ) {
-            analysis.tense = "future";
-            return;
+        if (questionWords.includes(first)) {
+            a.sentenceType = "question";
+            a.question = true;
         }
-
-        if (
-            words.includes("was") ||
-            words.includes("were") ||
-            words.includes("did") ||
-            words.includes("had")
-        ) {
-            analysis.tense = "past";
-            return;
-        }
-
-        if (
-            words.includes("has") ||
-            words.includes("have")
-        ) {
-            analysis.tense = "presentPerfect";
-            return;
-        }
-
-        if (
-            words.includes("am") ||
-            words.includes("is") ||
-            words.includes("are") ||
-            words.includes("do") ||
-            words.includes("does")
-        ) {
-            analysis.tense = "present";
-            return;
-        }
-
-        analysis.tense = "unknown";
-
     }
 
     /* ======================================================
-       Voice Detection
+       CONDITIONALS
     ====================================================== */
 
-    detectVoice(analysis) {
+    detectConditionals(a) {
 
-        const beForms = [
-            "am","is","are",
-            "was","were",
-            "be","been","being"
+        a.conditional = a.tokens.some(t =>
+            (t.lower || t.toLower?.()) === "if" ||
+            (t.lower || t.toLower?.()) === "unless"
+        );
+    }
+
+    /* ======================================================
+       NEGATIVES
+    ====================================================== */
+
+    detectNegative(a) {
+
+        a.negative = a.tokens.some(t => {
+            const w = t.lower || t.toLower?.();
+            return w === "not" || w === "never" || w === "no";
+        });
+    }
+
+    /* ======================================================
+       SUBJECT DETECTION (v6 preserved)
+    ====================================================== */
+
+    detectSubject(a) {
+
+        const pronouns = ["i","you","he","she","it","we","they"];
+
+        const p = a.pronouns[0]?.lower || a.pronouns[0]?.value;
+
+        if (p) {
+            a.subject = p;
+            return;
+        }
+
+        const noun = a.nouns[0];
+        if (noun) {
+            a.subject = noun.value;
+        }
+    }
+
+    /* ======================================================
+       VERB DETECTION (v6 preserved)
+    ====================================================== */
+
+    detectVerb(a) {
+
+        const auxiliaries = [
+            "am","is","are","was","were",
+            "be","been","being",
+            "do","does","did",
+            "have","has","had"
         ];
+
+        const modals = [
+            "can","could",
+            "may","might",
+            "must",
+            "shall","should",
+            "will","would"
+        ];
+
+        for (const t of a.tokens) {
+
+            const w = t.lower || t.toLower?.();
+
+            if (modals.includes(w)) continue;
+            if (auxiliaries.includes(w)) continue;
+
+            if (t.type === "verb" && !a.verb) {
+                a.verb = t.value;
+                a.verbForm = w;
+            }
+        }
+    }
+
+    /* ======================================================
+       OBJECT DETECTION (v6)
+    ====================================================== */
+
+    detectObject(a) {
+
+        if (a.nouns.length > 1) {
+            a.object = a.nouns[a.nouns.length - 1].value;
+        }
+    }
+
+    /* ======================================================
+       TENSE (v6)
+    ====================================================== */
+
+    detectTense(a) {
+
+        const w = a.tokens.map(t => t.lower || t.toLower?.());
+
+        if (w.includes("will") || w.includes("shall")) {
+            a.tense = "future";
+            return;
+        }
+
+        if (w.includes("was") || w.includes("were") || w.includes("did") || w.includes("had")) {
+            a.tense = "past";
+            return;
+        }
+
+        if (w.includes("has") || w.includes("have")) {
+            a.tense = "presentPerfect";
+            return;
+        }
+
+        if (w.includes("am") || w.includes("is") || w.includes("are") || w.includes("do") || w.includes("does")) {
+            a.tense = "present";
+            return;
+        }
+    }
+
+    /* ======================================================
+       VOICE (v6)
+    ====================================================== */
+
+    detectVoice(a) {
+
+        const be = ["am","is","are","was","were","be","been","being"];
 
         let hasBe = false;
-        let hasPastParticiple = false;
+        let hasPart = false;
 
-        for (const token of analysis.tokens) {
+        for (const t of a.tokens) {
 
-            if (beForms.includes(token.lower)) {
-                hasBe = true;
+            const w = t.lower || t.toLower?.();
+
+            if (be.includes(w)) hasBe = true;
+
+            if (t.type === "verb" && (w?.endsWith("ed") || w?.endsWith("en"))) {
+                hasPart = true;
             }
-
-            if (
-                token.type === "verb" &&
-                (
-                    token.lower.endsWith("ed") ||
-                    token.lower.endsWith("en")
-                )
-            ) {
-                hasPastParticiple = true;
-            }
-
         }
 
-        analysis.voice =
-            (hasBe && hasPastParticiple)
-                ? "passive"
-                : "active";
-
+        a.voice = (hasBe && hasPart) ? "passive" : "active";
     }
 
     /* ======================================================
-       Complexity Detection
+       COMPLEXITY (v6)
     ====================================================== */
 
-    detectComplexity(analysis) {
+    detectComplexity(a) {
 
-        const conjunctions = [
+        const conj = ["and","but","or","because","although","if","while","since","when","before","after"];
 
-            "and",
-            "but",
-            "or",
-            "because",
-            "although",
-            "though",
-            "while",
-            "whereas",
-            "since",
-            "if",
-            "unless",
-            "when",
-            "after",
-            "before"
-
-        ];
-
-        analysis.conjunctions = analysis.tokens.filter(
-            token => conjunctions.includes(token.lower)
+        a.conjunctions = a.tokens.filter(t =>
+            conj.includes(t.lower || t.toLower?.())
         );
 
-        analysis.complexity =
-            analysis.conjunctions.length > 0
-                ? "complex"
-                : "simple";
-
+        a.complexity = a.conjunctions.length > 0 ? "complex" : "simple";
     }
 
     /* ======================================================
-       Conditionals
+       ================= SIGNAL ENGINE ======================
+       (NEW LAYER - makes Rules easy)
     ====================================================== */
 
-    detectConditionals(analysis) {
+    detectAgreementSignals(a) {
 
-        analysis.conditional = analysis.tokens.some(
-            token =>
-                token.lower === "if" ||
-                token.lower === "unless"
-        );
+        if (!a.subject || !a.verb) return;
 
+        const s = a.subject.toLowerCase?.() || a.subject;
+        const v = (a.verbForm || "").toLowerCase();
+
+        if (["he","she","it"].includes(s)) {
+            if (v === "are" || v === "were") {
+                a.grammarSignals.agreementViolation = true;
+            }
+        }
+
+        if (["we","they"].includes(s)) {
+            if (v === "is" || v === "am") {
+                a.grammarSignals.agreementViolation = true;
+            }
+        }
     }
 
-    /* ======================================================
-       Negatives
-    ====================================================== */
+    detectArticleSignals(a) {
 
-    detectNegative(analysis) {
+        const words = a.tokens.map(t => t.lower || t.toLower?.());
 
-        analysis.negative = analysis.tokens.some(
-            token =>
-                token.lower === "not" ||
-                token.lower === "never" ||
-                token.lower === "no"
-        );
+        for (let i = 0; i < words.length - 1; i++) {
 
-    }
-       /* ======================================================
-       Build Analysis
-    ====================================================== */
+            if (words[i] === "a" && /^[aeiou]/.test(words[i + 1])) {
+                a.grammarSignals.articleError = true;
+            }
 
-    buildAnalysis() {
-
-        return {
-
-            tokens: this.tokens,
-
-            subject: this.subject,
-
-            object: this.object,
-
-            verb: this.mainVerb,
-
-            verbForm: this.verbForm,
-
-            auxiliaries: this.auxiliaries,
-
-            modals: this.modals,
-
-            prepositions: this.prepositions,
-
-            articles: this.articles,
-
-            pronouns: this.pronouns,
-
-            adjectives: this.adjectives,
-
-            adverbs: this.adverbs,
-
-            timeExpressions: this.timeExpressions,
-
-            conjunctions: this.conjunctions,
-
-            tense: this.tense,
-
-            voice: this.voice,
-
-            sentenceType: this.sentenceType,
-
-            negative: this.negative,
-
-            question: this.question,
-
-            conditional: this.conditional,
-
-            complexity: this.complexity
-
-        };
-
+            if (words[i] === "an" && !/^[aeiou]/.test(words[i + 1])) {
+                a.grammarSignals.articleError = true;
+            }
+        }
     }
 
+    detectPronounSignals(a) {
+
+        if (a.pronouns.length > 0) {
+            a.grammarSignals.pronounIssue = false;
+        }
+    }
+
+    detectVerbSignals(a) {
+        // placeholder for future verb mismatch detection
+    }
 }
 
 /* ==========================================================
-   Create Singleton
+   EXPORT
 ========================================================== */
 
-const analyzer = new Analyzer();
-
-/* ==========================================================
-   Export
-========================================================== */
-
-window.analyzer = analyzer;
-
-window.Analyzer = Analyzer;
-
-/* ==========================================================
-   Register with GrammarEngine
-========================================================== */
-
-if (
-    window.GrammarEngine &&
-    typeof window.GrammarEngine.registerManager === "function"
-) {
-
-    window.GrammarEngine.registerManager(
-        "analyzer",
-        analyzer
-    );
-
-} else {
-
-    console.warn(
-        "[Analyzer] GrammarEngine not found."
-    );
-
-}
+module.exports = Analyzer;
