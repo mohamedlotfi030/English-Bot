@@ -2,96 +2,114 @@
 
 /* ==========================================================
    English-Bot
-   Word Order Rules
-   Version 7.0
+   Word Order Rules v9 (Production Ready)
+   - Rule-based architecture
+   - Handles SVO, Inversion, and Adverb/Negative placement
 ========================================================== */
 
-const wordOrderRules = [];
-
-/* ==========================================================
-   Subject + Verb + Object (SVO)
-========================================================== */
-
-wordOrderRules.push({
-    id: "svo_order",
-    type: "word_order",
+/**
+ * Rule: SVO Order Consistency
+ */
+const svo_order_rule = new GrammarRule({
+    id: "order_svo",
+    name: "SVO Order",
+    category: GrammarCategory.WORD_ORDER,
+    severity: GrammarSeverity.ERROR,
     priority: 10,
+    enabled: true,
 
-    description: "Ensure Subject + Verb + Object order in statements",
-
-    test(sentence, context) {
-        return context.type === "statement" && !context.isSVO;
+    test(text, analysis, tokens) {
+        return analysis.sentenceType === "statement" && !analysis.isSVO;
     },
 
-    fix(sentence) {
-        return sentence.toSVO?.() || sentence;
+    fix(text, analysis, tokens) {
+        return {
+            text: analysis.toSVO?.() || text,
+            issue: true,
+            reason: "Standard English statements follow Subject-Verb-Object order."
+        };
     }
 });
 
-/* ==========================================================
-   Question Inversion
-========================================================== */
-
-wordOrderRules.push({
-    id: "question_inversion",
-    type: "word_order",
+/**
+ * Rule: Question Inversion
+ */
+const question_inversion_rule = new GrammarRule({
+    id: "order_question_inversion",
+    name: "Question Inversion",
+    category: GrammarCategory.WORD_ORDER,
+    severity: GrammarSeverity.ERROR,
     priority: 20,
+    enabled: true,
 
-    description: "Invert subject and auxiliary in questions",
-
-    test(sentence, context) {
-        return context.type === "question" && !context.isInverted;
+    test(text, analysis, tokens) {
+        return analysis.sentenceType === "question" && !analysis.isInverted;
     },
 
-    fix(sentence) {
-        return sentence.invertSubjectAuxiliary?.() || sentence;
+    fix(text, analysis, tokens) {
+        return {
+            text: analysis.invertSubjectAuxiliary?.() || text,
+            issue: true,
+            reason: "Questions require inversion of subject and auxiliary."
+        };
     }
 });
 
-/* ==========================================================
-   Adverb Placement
-========================================================== */
-
-wordOrderRules.push({
-    id: "adverb_placement",
-    type: "word_order",
+/**
+ * Rule: Adverb Placement
+ */
+const adverb_placement_rule = new GrammarRule({
+    id: "order_adverb",
+    name: "Adverb Placement",
+    category: GrammarCategory.WORD_ORDER,
+    severity: GrammarSeverity.WARNING,
     priority: 30,
+    enabled: true,
 
-    description: "Place frequency adverbs before main verb but after auxiliary",
-
-    test(sentence, context) {
-        return context.hasFrequencyAdverb && !context.isCorrectAdverbPlacement;
+    test(text, analysis, tokens) {
+        return analysis.hasFrequencyAdverb && !analysis.isCorrectAdverbPlacement;
     },
 
-    fix(sentence) {
-        return sentence.fixAdverbPlacement?.() || sentence;
+    fix(text, analysis, tokens) {
+        return {
+            text: analysis.fixAdverbPlacement?.() || text,
+            issue: true,
+            reason: "Adverbs of frequency usually go before the main verb and after the auxiliary."
+        };
     }
 });
 
-/* ==========================================================
-   Negative Placement
-========================================================== */
-
-wordOrderRules.push({
-    id: "negative_placement",
-    type: "word_order",
+/**
+ * Rule: Negative Placement
+ */
+const negative_placement_rule = new GrammarRule({
+    id: "order_negative",
+    name: "Negative Placement",
+    category: GrammarCategory.WORD_ORDER,
+    severity: GrammarSeverity.ERROR,
     priority: 40,
+    enabled: true,
 
-    description: "Place 'not' after auxiliary verb",
-
-    test(sentence, context) {
-        return context.isNegative && !context.hasNotAfterAuxiliary;
+    test(text, analysis, tokens) {
+        return analysis.isNegative && !analysis.hasNotAfterAuxiliary;
     },
 
-    fix(sentence) {
-        return sentence.fixNegativePlacement?.() || sentence;
+    fix(text, analysis, tokens) {
+        return {
+            text: analysis.fixNegativePlacement?.() || text,
+            issue: true,
+            reason: "Place 'not' immediately after the auxiliary verb."
+        };
     }
 });
 
 /* ==========================================================
-   REGISTER
+   REGISTRATION
 ========================================================== */
 
-GrammarEngine.registerRules("word_order", wordOrderRules);
-
-window.wordOrderRules = wordOrderRules;
+GrammarEngine.registerRules([
+    svo_order_rule,
+    question_inversion_rule,
+    adverb_placement_rule,
+    negative_placement_rule
+]);
