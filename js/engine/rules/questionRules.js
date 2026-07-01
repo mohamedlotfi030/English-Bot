@@ -3,25 +3,17 @@
 /* ==========================================================
    English-Bot
    Question Rules
-   Version 5.0
+   Version 7.0 (Clean Compatible)
 ========================================================== */
 
 const questionRules = [];
 
 /* ==========================================================
-   Rule Registration
+   Helper
 ========================================================== */
 
-function addQuestionRule({
-    description,
-    condition,
-    correction
-}) {
-    questionRules.push({
-        description,
-        condition,
-        correction
-    });
+function addQuestionRule(rule) {
+    questionRules.push(rule);
 }
 
 /* ==========================================================
@@ -29,35 +21,66 @@ function addQuestionRule({
 ========================================================== */
 
 addQuestionRule({
-    description: "Use auxiliary verb before subject in yes/no questions",
-    condition: (sentence, context) => context.type === "yesNo" && !sentence.startsWithAuxiliary,
-    correction: (sentence, aux) => aux + " " + sentence
+    id: "question_yes_no_aux",
+    category: "QUESTION",
+    priority: 100,
+
+    test(sentence, context) {
+        return context.type === "yesNo" && !/^(do|does|did|is|are|was|were|can|will|have)\b/i.test(sentence);
+    },
+
+    fix(sentence, context) {
+        const aux = context.auxiliary || "do";
+        return {
+            text: aux + " " + sentence,
+            issue: true,
+            reason: "Yes/No questions need auxiliary before subject"
+        };
+    }
 });
 
 /* ==========================================================
-   Wh-Questions
+   Wh-Questions (Start Position)
 ========================================================== */
 
 addQuestionRule({
-    description: "Use wh-word at the beginning of wh-questions",
-    condition: (sentence, context) => context.type === "wh" && !sentence.startsWithWhWord,
-    correction: (sentence, whWord) => whWord + " " + sentence
-});
+    id: "question_wh_order",
+    category: "QUESTION",
+    priority: 200,
 
-addQuestionRule({
-    description: "Follow wh-word with auxiliary verb",
-    condition: (sentence, context) => context.type === "wh" && !sentence.hasAuxiliaryAfterWh,
-    correction: (sentence, aux) => sentence.replace(/^(\w+)/, "$1 " + aux)
+    test(sentence, context) {
+        return context.type === "wh" && !/^(what|why|how|when|where|who|which)\b/i.test(sentence);
+    },
+
+    fix(sentence, context) {
+        const wh = context.whWord || "what";
+        return {
+            text: wh + " " + sentence,
+            issue: true
+        };
+    }
 });
 
 /* ==========================================================
-   Question Word Order
+   Wh + Auxiliary Order
 ========================================================== */
 
 addQuestionRule({
-    description: "Invert subject and auxiliary in questions",
-    condition: (sentence, context) => context.isQuestion && !context.isInverted,
-    correction: (sentence) => sentence.invertSubjectAuxiliary()
+    id: "question_wh_aux",
+    category: "QUESTION",
+    priority: 180,
+
+    test(sentence, context) {
+        return context.type === "wh" && !context.hasAuxiliary;
+    },
+
+    fix(sentence, context) {
+        const aux = context.auxiliary || "do";
+        return {
+            text: sentence.replace(/^(what|why|how|when|where|who|which)\s+/i, (m) => m + aux + " "),
+            issue: true
+        };
+    }
 });
 
 /* ==========================================================
@@ -65,18 +88,29 @@ addQuestionRule({
 ========================================================== */
 
 addQuestionRule({
-    description: "Use auxiliary + subject pronoun in tag questions",
-    condition: (sentence, context) => context.type === "tag" && !sentence.hasTag,
-    correction: (sentence, aux, pronoun) => sentence + ", " + aux + " " + pronoun + "?"
+    id: "question_tag",
+    category: "QUESTION",
+    priority: 150,
+
+    test(sentence, context) {
+        return context.type === "tag" && !context.hasTag;
+    },
+
+    fix(sentence, context) {
+        const aux = context.auxiliary || "is";
+        const pronoun = context.pronoun || "it";
+
+        return {
+            text: sentence + ", " + aux + " " + pronoun + "?",
+            issue: true
+        };
+    }
 });
 
 /* ==========================================================
    Register Rules
 ========================================================== */
 
-GrammarEngine.registerRules(
-    "questionRules",
-    questionRules
-);
+GrammarEngine.registerMany(questionRules);
 
 window.questionRules = questionRules;
