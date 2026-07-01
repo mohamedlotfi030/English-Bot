@@ -2,75 +2,101 @@
 
 /* ==========================================================
    English-Bot
-   Participle Rules
-   Version 5.0
+   Participle Engine v7
+   Structural grammar layer (NOT word replacement)
 ========================================================== */
 
-const participleRules = [];
+class ParticipleEngine {
 
-/* ==========================================================
-   Rule Registration
-========================================================== */
+    apply(analysis) {
 
-function addParticipleRule({
-    description,
-    condition,
-    correction
-}) {
-    participleRules.push({
-        description,
-        condition,
-        correction
-    });
+        if (!analysis || !analysis.verb) return analysis;
+
+        this.processContinuous(analysis);
+        this.processPerfect(analysis);
+        this.processPassive(analysis);
+        this.processAdjectivalParticiples(analysis);
+
+        return analysis;
+    }
+
+    /* ======================================================
+       Continuous Tenses
+    ====================================================== */
+
+    processContinuous(a) {
+
+        const continuousTenses = [
+            "presentContinuous",
+            "pastContinuous",
+            "futureContinuous"
+        ];
+
+        if (!continuousTenses.includes(a.tense)) return;
+
+        a.structure = a.structure || {};
+
+        a.structure.requiresBeAuxiliary = true;
+        a.structure.requiresIngForm = true;
+    }
+
+    /* ======================================================
+       Perfect Tenses
+    ====================================================== */
+
+    processPerfect(a) {
+
+        const perfectTenses = [
+            "presentPerfect",
+            "pastPerfect",
+            "futurePerfect"
+        ];
+
+        if (!perfectTenses.includes(a.tense)) return;
+
+        a.structure = a.structure || {};
+
+        a.structure.requiresHaveAuxiliary = true;
+        a.structure.requiresPastParticiple = true;
+    }
+
+    /* ======================================================
+       Passive Voice
+    ====================================================== */
+
+    processPassive(a) {
+
+        if (!a.voice || a.voice !== "passive") return;
+
+        a.structure = a.structure || {};
+
+        a.structure.requiresBeAuxiliary = true;
+        a.structure.requiresPastParticiple = true;
+        a.structure.hasAgentOptional = true;
+    }
+
+    /* ======================================================
+       Adjectival Participles
+    ====================================================== */
+
+    processAdjectivalParticiples(a) {
+
+        if (!a.adjectives) return;
+
+        for (const adj of a.adjectives) {
+
+            if (!adj.isDerivedFromVerb) continue;
+
+            adj.participleRole =
+                adj.meaning === "active"
+                    ? "presentParticiple"
+                    : "pastParticiple";
+        }
+    }
 }
 
 /* ==========================================================
-   Present Participle (-ing)
+   EXPORT
 ========================================================== */
 
-addParticipleRule({
-    description: "Use present participle (-ing) for continuous tenses",
-    condition: (verb, tense) => tense.includes("Continuous") && !verb.form.endsWith("ing"),
-    correction: (verb) => verb.toIngForm()
-});
-
-/* ==========================================================
-   Past Participle
-========================================================== */
-
-addParticipleRule({
-    description: "Use past participle with perfect tenses",
-    condition: (verb, tense) => ["presentPerfect","pastPerfect","futurePerfect"].includes(tense) && verb.form !== verb.pastParticiple,
-    correction: (verb) => verb.pastParticiple
-});
-
-/* ==========================================================
-   Passive Voice
-========================================================== */
-
-addParticipleRule({
-    description: "Use past participle in passive voice constructions",
-    condition: (verb, context) => context.isPassive && verb.form !== verb.pastParticiple,
-    correction: (verb) => verb.pastParticiple
-});
-
-/* ==========================================================
-   Adjective Use
-========================================================== */
-
-addParticipleRule({
-    description: "Use participles as adjectives (e.g., interesting, broken)",
-    condition: (word, context) => context.role === "adjective" && !word.isParticiple,
-    correction: (word) => word.toParticipleForm()
-});
-
-/* ==========================================================
-   Register Rules
-========================================================== */
-
-GrammarEngine.registerRules(
-    "participleRules",
-    participleRules
-);
-
-window.participleRules = participleRules;
+module.exports = ParticipleEngine;
