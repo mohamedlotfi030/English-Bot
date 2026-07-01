@@ -2,105 +2,93 @@
 
 /* ==========================================================
    English-Bot
-   Negative Rules
-   Version 5.0
+   Negative Rules v7
+   - Structural validation only
 ========================================================== */
 
-const negativeRules = [];
+class NegativeRules {
 
-/* ==========================================================
-   Rule Registration
-========================================================== */
+    apply(analysis) {
 
-function addNegativeRule({
-    description,
-    condition,
-    correction
-}) {
-    negativeRules.push({
-        description,
-        condition,
-        correction
-    });
+        if (!analysis || !analysis.grammarSignals) return analysis;
+
+        this.detectNegationIssues(analysis);
+
+        return analysis;
+    }
+
+    /* ======================================================
+       CORE NEGATION LOGIC
+    ====================================================== */
+
+    detectNegationIssues(a) {
+
+        const tokens = a.tokens.map(t => t.lower);
+
+        const hasNot = tokens.includes("not");
+
+        const subject = a.subject;
+
+        const tense = a.tense;
+
+        /* ==================================================
+           PRESENT SIMPLE DO-SUPPORT CHECK
+        ================================================== */
+
+        if (tense === "present" && !a.auxiliaries?.length) {
+
+            if (hasNot) {
+                a.grammarSignals.doSupportMissing = true;
+            }
+        }
+
+        /* ==================================================
+           PAST SIMPLE DO-SUPPORT CHECK
+        ================================================== */
+
+        if (tense === "past" && !a.auxiliaries?.length) {
+
+            if (hasNot) {
+                a.grammarSignals.didSupportMissing = true;
+            }
+        }
+
+        /* ==================================================
+           BE VERB NEGATION STRUCTURE
+        ================================================== */
+
+        if (a.verb?.base === "be" && hasNot) {
+            a.grammarSignals.beNegationDetected = true;
+        }
+
+        /* ==================================================
+           MODAL NEGATION STRUCTURE
+        ================================================== */
+
+        const modals = a.modals || [];
+
+        if (modals.length > 0 && hasNot) {
+            a.grammarSignals.modalNegationDetected = true;
+        }
+
+        /* ==================================================
+           DOUBLE NEGATION DETECTION
+        ================================================== */
+
+        const negativeWords = ["not","never","no","nothing","nobody"];
+
+        const countNeg = tokens.filter(t =>
+            negativeWords.includes(t)
+        ).length;
+
+        if (countNeg > 1) {
+            a.grammarSignals.doubleNegationWarning = true;
+        }
+    }
 }
 
 /* ==========================================================
-   Present Simple Negatives
+   EXPORT
 ========================================================== */
 
-addNegativeRule({
-    description: "Use 'do not/don’t' with plural subjects in present simple",
-    condition: (verb, context) => context.tense === "present" && context.isPlural && !context.isNegative,
-    correction: () => "do not"
-});
-
-addNegativeRule({
-    description: "Use 'does not/doesn’t' with singular third-person subjects in present simple",
-    condition: (verb, context) => context.tense === "present" && context.isThirdPersonSingular && !context.isNegative,
-    correction: () => "does not"
-});
-
-/* ==========================================================
-   Past Simple Negatives
-========================================================== */
-
-addNegativeRule({
-    description: "Use 'did not/didn’t' for past simple negatives",
-    condition: (verb, context) => context.tense === "past" && !context.isNegative,
-    correction: () => "did not"
-});
-
-/* ==========================================================
-   Be Verb Negatives
-========================================================== */
-
-addNegativeRule({
-    description: "Use 'is not/isn’t' with singular present subjects",
-    condition: (verb, context) => verb.base === "be" && context.tense === "present" && context.isSingular && !context.isNegative,
-    correction: () => "is not"
-});
-
-addNegativeRule({
-    description: "Use 'are not/aren’t' with plural present subjects",
-    condition: (verb, context) => verb.base === "be" && context.tense === "present" && context.isPlural && !context.isNegative,
-    correction: () => "are not"
-});
-
-addNegativeRule({
-    description: "Use 'was not/wasn’t' with singular past subjects",
-    condition: (verb, context) => verb.base === "be" && context.tense === "past" && context.isSingular && !context.isNegative,
-    correction: () => "was not"
-});
-
-addNegativeRule({
-    description: "Use 'were not/weren’t' with plural past subjects",
-    condition: (verb, context) => verb.base === "be" && context.tense === "past" && context.isPlural && !context.isNegative,
-    correction: () => "were not"
-});
-
-/* ==========================================================
-   Modal Verb Negatives
-========================================================== */
-
-addNegativeRule({
-    description: "Use 'cannot/can’t' for negative ability",
-    condition: (verb, context) => verb.base === "can" && !context.isNegative,
-    correction: () => "cannot"
-});
-
-addNegativeRule({
-    description: "Use 'will not/won’t' for negative future",
-    condition: (verb, context) => verb.base === "will" && !context.isNegative,
-    correction: () => "will not"
-});
-
-/* ==========================================================
-   Register Rules
-========================================================== */
-
-GrammarEngine.registerRules(
-    "negativeRules",
-    negativeRules
-);
-
-window.negativeRules = negativeRules;
+module.exports = NegativeRules;
