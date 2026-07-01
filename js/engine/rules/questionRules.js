@@ -2,115 +2,97 @@
 
 /* ==========================================================
    English-Bot
-   Question Rules
-   Version 7.0 (Clean Compatible)
+   Question Rules v9 (Production Ready)
+   - Rule-based architecture
+   - Handles Yes/No, Wh-, and Tag questions
 ========================================================== */
 
-const questionRules = [];
-
-/* ==========================================================
-   Helper
-========================================================== */
-
-function addQuestionRule(rule) {
-    questionRules.push(rule);
-}
-
-/* ==========================================================
-   Yes/No Questions
-========================================================== */
-
-addQuestionRule({
+/**
+ * Rule: Yes/No Question (Inversion)
+ */
+const yes_no_question_rule = new GrammarRule({
     id: "question_yes_no_aux",
-    category: "QUESTION",
+    name: "Yes/No Question Inversion",
+    category: GrammarCategory.QUESTION,
+    severity: GrammarSeverity.ERROR,
     priority: 100,
+    enabled: true,
 
-    test(sentence, context) {
-        return context.type === "yesNo" && !/^(do|does|did|is|are|was|were|can|will|have)\b/i.test(sentence);
+    test(text, analysis, tokens) {
+        if (analysis.sentenceType !== "yesNo") return false;
+        const auxList = /^(do|does|did|is|are|was|were|can|will|have)\b/i;
+        return !auxList.test(text);
     },
 
-    fix(sentence, context) {
-        const aux = context.auxiliary || "do";
+    fix(text, analysis, tokens) {
+        const aux = analysis.auxiliary || "do";
         return {
-            text: aux + " " + sentence,
+            text: `${aux} ${text}`,
             issue: true,
-            reason: "Yes/No questions need auxiliary before subject"
+            reason: "Yes/No questions require an auxiliary verb at the start."
         };
     }
 });
 
-/* ==========================================================
-   Wh-Questions (Start Position)
-========================================================== */
-
-addQuestionRule({
+/**
+ * Rule: Wh- Question Order
+ */
+const wh_question_rule = new GrammarRule({
     id: "question_wh_order",
-    category: "QUESTION",
+    name: "Wh- Question Structure",
+    category: GrammarCategory.QUESTION,
+    severity: GrammarSeverity.ERROR,
     priority: 200,
+    enabled: true,
 
-    test(sentence, context) {
-        return context.type === "wh" && !/^(what|why|how|when|where|who|which)\b/i.test(sentence);
+    test(text, analysis, tokens) {
+        if (analysis.sentenceType !== "wh") return false;
+        const whList = /^(what|why|how|when|where|who|which)\b/i;
+        return !whList.test(text);
     },
 
-    fix(sentence, context) {
-        const wh = context.whWord || "what";
+    fix(text, analysis, tokens) {
+        const wh = analysis.whWord || "what";
         return {
-            text: wh + " " + sentence,
-            issue: true
+            text: `${wh} ${text}`,
+            issue: true,
+            reason: "Wh- questions must start with a wh- word."
         };
     }
 });
 
-/* ==========================================================
-   Wh + Auxiliary Order
-========================================================== */
-
-addQuestionRule({
-    id: "question_wh_aux",
-    category: "QUESTION",
-    priority: 180,
-
-    test(sentence, context) {
-        return context.type === "wh" && !context.hasAuxiliary;
-    },
-
-    fix(sentence, context) {
-        const aux = context.auxiliary || "do";
-        return {
-            text: sentence.replace(/^(what|why|how|when|where|who|which)\s+/i, (m) => m + aux + " "),
-            issue: true
-        };
-    }
-});
-
-/* ==========================================================
-   Tag Questions
-========================================================== */
-
-addQuestionRule({
+/**
+ * Rule: Tag Question
+ */
+const tag_question_rule = new GrammarRule({
     id: "question_tag",
-    category: "QUESTION",
+    name: "Tag Question Completion",
+    category: GrammarCategory.QUESTION,
+    severity: GrammarSeverity.WARNING,
     priority: 150,
+    enabled: true,
 
-    test(sentence, context) {
-        return context.type === "tag" && !context.hasTag;
+    test(text, analysis, tokens) {
+        return analysis.sentenceType === "tag" && !analysis.hasTag;
     },
 
-    fix(sentence, context) {
-        const aux = context.auxiliary || "is";
-        const pronoun = context.pronoun || "it";
-
+    fix(text, analysis, tokens) {
+        const aux = analysis.auxiliary || "is";
+        const pronoun = analysis.pronoun || "it";
         return {
-            text: sentence + ", " + aux + " " + pronoun + "?",
-            issue: true
+            text: `${text}, ${aux} ${pronoun}?`,
+            issue: true,
+            reason: "Tag question incomplete."
         };
     }
 });
 
 /* ==========================================================
-   Register Rules
+   REGISTRATION
 ========================================================== */
 
-GrammarEngine.registerMany(questionRules);
-
-window.questionRules = questionRules;
+GrammarEngine.registerRules([
+    yes_no_question_rule,
+    wh_question_rule,
+    tag_question_rule
+]);
