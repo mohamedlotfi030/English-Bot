@@ -2,101 +2,67 @@
 
 /* ==========================================================
    English-Bot
-   Contraction Rules
-   Version 5.0
+   Contraction Rules v7
+   - Style / Register layer (NOT grammar)
 ========================================================== */
 
-const contractionRules = [];
+class ContractionRules {
 
-/* ==========================================================
-   Rule Registration
-========================================================== */
+    apply(text, context = {}) {
 
-function addContractionRule({
-    description,
-    condition,
-    correction
-}) {
-    contractionRules.push({
-        description,
-        condition,
-        correction
-    });
+        if (!text || typeof text !== "string") return text;
+
+        // contractions only apply in informal register
+        if (!context.isInformal) return text;
+
+        let result = text;
+
+        result = this.applyNegations(result);
+        result = this.applyPronounContractions(result);
+        result = this.applyAuxiliaryContractions(result);
+
+        return result;
+    }
+
+    /* ======================================================
+       1. NEGATIONS
+    ====================================================== */
+
+    applyNegations(text) {
+
+        return text
+            .replace(/\bdo not\b/g, "don't")
+            .replace(/\bcannot\b/g, "can't")
+            .replace(/\bwill not\b/g, "won't");
+    }
+
+    /* ======================================================
+       2. PRONOUN + BE VERB
+    ====================================================== */
+
+    applyPronounContractions(text) {
+
+        return text
+            .replace(/\bI am\b/g, "I'm")
+            .replace(/\byou are\b/g, "you're")
+            .replace(/\bhe is\b/g, "he's");
+    }
+
+    /* ======================================================
+       3. AUXILIARY VERBS
+    ====================================================== */
+
+    applyAuxiliaryContractions(text) {
+
+        return text
+            .replace(/\bI have\b/g, "I've")
+            .replace(/\bwe have\b/g, "we've")
+            .replace(/\bthey have\b/g, "they've");
+    }
 }
 
 /* ==========================================================
-   Negative Contractions
+   EXPORT
 ========================================================== */
 
-addContractionRule({
-    description: "Use 'don't' instead of 'do not' in informal contexts",
-    condition: (phrase, context) => phrase === "do not" && context.isInformal,
-    correction: () => "don't"
-});
-
-addContractionRule({
-    description: "Use 'can't' instead of 'cannot' in informal contexts",
-    condition: (phrase, context) => phrase === "cannot" && context.isInformal,
-    correction: () => "can't"
-});
-
-addContractionRule({
-    description: "Use 'won't' instead of 'will not' in informal contexts",
-    condition: (phrase, context) => phrase === "will not" && context.isInformal,
-    correction: () => "won't"
-});
-
-/* ==========================================================
-   Pronoun + Verb Contractions
-========================================================== */
-
-addContractionRule({
-    description: "Use 'I'm' instead of 'I am' in informal contexts",
-    condition: (phrase, context) => phrase === "I am" && context.isInformal,
-    correction: () => "I'm"
-});
-
-addContractionRule({
-    description: "Use 'you're' instead of 'you are' in informal contexts",
-    condition: (phrase, context) => phrase === "you are" && context.isInformal,
-    correction: () => "you're"
-});
-
-addContractionRule({
-    description: "Use 'he's' instead of 'he is' in informal contexts",
-    condition: (phrase, context) => phrase === "he is" && context.isInformal,
-    correction: () => "he's"
-});
-
-/* ==========================================================
-   Auxiliary Verb Contractions
-========================================================== */
-
-addContractionRule({
-    description: "Use 'I've' instead of 'I have' in informal contexts",
-    condition: (phrase, context) => phrase === "I have" && context.isInformal,
-    correction: () => "I've"
-});
-
-addContractionRule({
-    description: "Use 'we've' instead of 'we have' in informal contexts",
-    condition: (phrase, context) => phrase === "we have" && context.isInformal,
-    correction: () => "we've"
-});
-
-addContractionRule({
-    description: "Use 'they've' instead of 'they have' in informal contexts",
-    condition: (phrase, context) => phrase === "they have" && context.isInformal,
-    correction: () => "they've"
-});
-
-/* ==========================================================
-   Register Rules
-========================================================== */
-
-GrammarEngine.registerRules(
-    "contractionRules",
-    contractionRules
-);
-
-window.contractionRules = contractionRules;
+module.exports = ContractionRules;
