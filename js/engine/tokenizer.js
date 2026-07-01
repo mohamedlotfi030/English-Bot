@@ -1,83 +1,236 @@
 "use strict";
 
-class Tokenizer {
-    // Regex يدعم الكلمات المركبة (مثل mother-in-law) والترقيم
-    static REGEX = /[A-Za-z]+(?:['-][A-Za-z]+)*|\d+(?:\.\d+)?|[.,!?;:()[\]{}"]/g;
+/* ==========================================================
+   English-Bot
+   Tokenizer v9
+   Compatible with GrammarEngine v8+
+========================================================== */
 
-    tokenize(text) {
-        const tokens = [];
-        let match;
-        
-        // استخدام exec للحصول على المواقع (start, end)
-        while ((match = Tokenizer.REGEX.exec(text)) !== null) {
-            tokens.push({
-                value: match[0],      // القيمة الأصلية (مع Capitalization)
-                lower: match[0].toLowerCase(),
-                start: match.index,   // الموقع في النص الأصلي
-                end: match.index + match[0].length,
-                isWord: /^[A-Za-z]/.test(match[0])
-            });
-        }
-        return tokens;
-    }
-}
-class Processor {
-    constructor(dictionaryManager) {
-        this.dict = dictionaryManager;
-        // قاموس التوسيع (Contraction Expansion)
+class Tokenizer {
+
+    constructor() {
+
+        this.regex =
+            /[A-Za-z]+(?:['’-][A-Za-z]+)*|\d+(?:\.\d+)?|[.,!?;:()[\]{}"]/g;
+
         this.expansions = {
-            "i'm": ["i", "am"], "can't": ["can", "not"], 
-            "it's": ["it", "is"], "they're": ["they", "are"],
-            "he's": ["he", "is"], "i've": ["i", "have"]
+
+            "i'm": ["i","am"],
+            "i've": ["i","have"],
+            "i'd": ["i","would"],
+            "i'll": ["i","will"],
+
+            "you're": ["you","are"],
+            "you've": ["you","have"],
+
+            "he's": ["he","is"],
+            "she's": ["she","is"],
+            "it's": ["it","is"],
+
+            "we're": ["we","are"],
+            "they're": ["they","are"],
+
+            "can't": ["can","not"],
+            "won't": ["will","not"],
+            "don't": ["do","not"],
+            "doesn't": ["does","not"],
+            "didn't": ["did","not"],
+
+            "isn't": ["is","not"],
+            "aren't": ["are","not"],
+            "wasn't": ["was","not"],
+            "weren't": ["were","not"],
+
+            "hasn't": ["has","not"],
+            "haven't": ["have","not"],
+            "hadn't": ["had","not"]
         };
+
     }
+
+    /* ======================================================
+       RAW TOKENIZATION
+    ====================================================== */
+
+    tokenize(text = "") {
+
+        if (!text.trim())
+            return [];
+
+        const rawTokens = [];
+
+        this.regex.lastIndex = 0;
+
+        let match;
+
+        while ((match = this.regex.exec(text)) !== null) {
+
+            rawTokens.push({
+
+                value: match[0],
+
+                lower: match[0].toLowerCase(),
+
+                start: match.index,
+
+                end: match.index + match[0].length,
+
+                isWord: /^[A-Za-z]/.test(match[0])
+
+            });
+
+        }
+
+        return this.process(rawTokens);
+
+    }
+
+    /* ======================================================
+       PROCESS TOKENS
+    ====================================================== */
 
     process(rawTokens) {
-        const logicalTokens = [];
-        
+
+        const logical = [];
+
         for (const token of rawTokens) {
+
             const expansion = this.expansions[token.lower];
-            
+
             if (expansion) {
-                // فك الاختصار إلى Tokens منطقية
-                expansion.forEach(val => {
-                    logicalTokens.push({
-                        value: val,
-                        origin: token, // رابط للـ Token الأصلي لتصحيح الـ Offsets لاحقاً
-                        isExpanded: true,
-                        type: this.dict.classify(val)
+
+                expansion.forEach(word => {
+
+                    logical.push({
+
+                        value: word,
+
+                        lower: word,
+
+                        start: token.start,
+
+                        end: token.end,
+
+                        origin: token,
+
+                        expanded: true,
+
+                        type: this.classify(word)
+
                     });
+
                 });
-            } else {
-                logicalTokens.push({
-                    value: token.lower,
-                    origin: token,
-                    isExpanded: false,
-                    type: this.dict.classify(token.lower)
-                });
+
             }
+
+            else {
+
+                logical.push({
+
+                    value: token.value,
+
+                    lower: token.lower,
+
+                    start: token.start,
+
+                    end: token.end,
+
+                    origin: token,
+
+                    expanded: false,
+
+                    type: this.classify(token.lower)
+
+                });
+
+            }
+
         }
-        return logicalTokens;
+
+        return logical;
+
     }
+
+    /* ======================================================
+       CLASSIFY
+    ====================================================== */
+
+    classify(word) {
+
+        if (/^\d/.test(word))
+            return "number";
+
+        if (/^[.,!?;:()[\]{}"]$/.test(word))
+            return "punctuation";
+
+        const dictionaries = {
+
+            article: GrammarEngine.getDictionary("articles"),
+
+            noun: GrammarEngine.getDictionary("nouns"),
+
+            verb: GrammarEngine.getDictionary("verbs"),
+
+            adjective: GrammarEngine.getDictionary("adjectives"),
+
+            adverb: GrammarEngine.getDictionary("adverbs"),
+
+            pronoun: GrammarEngine.getDictionary("pronouns"),
+
+            preposition: GrammarEngine.getDictionary("prepositions")
+
+        };
+
+        for (const [type, dict] of Object.entries(dictionaries)) {
+
+            if (!dict)
+                continue;
+
+            if (dict instanceof Set && dict.has(word))
+                return type;
+
+            if (dict instanceof Map && dict.has(word))
+                return type;
+
+            if (Array.isArray(dict) && dict.includes(word))
+                return type;
+
+        }
+
+        return "word";
+
+    }
+
 }
+
 /* ==========================================================
-   REGISTRATION & INITIALIZATION
+   SINGLETON
 ========================================================== */
 
 const tokenizer = new Tokenizer();
-// سنفترض أن dictionaryManager هو كلاس يقوم بـ classify
-const processor = new Processor(window.GrammarEngine.getDictionaryManager());
 
-// تسجيل في المحرك
+/* ==========================================================
+   EXPORT
+========================================================== */
+
+window.Tokenizer = Tokenizer;
+
+window.tokenizer = tokenizer;
+
+/* ==========================================================
+   REGISTER
+========================================================== */
+
 if (window.GrammarEngine) {
-    window.GrammarEngine.registerManager("tokenizer", tokenizer);
-    window.GrammarEngine.registerManager("processor", processor);
-    console.log("[System] Pipeline initialized successfully.");
-}
 
-/**
- * طريقة الاستخدام من قبل الـ Analyzer:
- * 1. const raw = tokenizer.tokenize(text);
- * 2. const logical = processor.process(raw);
- * 3. Analyzer يبدأ العمل على logical، وإذا وجد خطأ، يرجع لـ origin الموجود في كل token.
- */
+    GrammarEngine.registerManager(
+
+        "tokenizer",
+
+        tokenizer
+
+    );
+
+    console.log("[Tokenizer] Registered successfully.");
+
+}
